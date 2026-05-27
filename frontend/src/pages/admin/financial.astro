@@ -1,191 +1,473 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro'
-import { supabaseAdmin } from '../../lib/supabase-server'
+import { getSessionFromCookies, isAdmin } from '../../lib/auth'
 
-const statusFilter = Astro.url.searchParams.get('status') || 'all'
-const dateFrom = Astro.url.searchParams.get('from')
-const dateTo = Astro.url.searchParams.get('to')
-
-let query = supabaseAdmin
-  .from('orders')
-  .select('*, user:users(full_name, email), product:products(title), affiliate:users!orders_affiliate_id_fkey(full_name)')
-  .order('created_at', { ascending: false })
-
-if (statusFilter !== 'all') {
-  query = query.eq('status', statusFilter)
+const session = await getSessionFromCookies(Astro.cookies)
+if (!session?.profile || !isAdmin(session.profile)) {
+  return Astro.redirect('/login')
 }
-
-if (dateFrom) {
-  query = query.gte('created_at', dateFrom)
-}
-
-if (dateTo) {
-  query = query.lte('created_at', dateTo)
-}
-
-const { data: orders } = await query
-
-const { count: totalOrders } = await supabaseAdmin
-  .from('orders')
-  .select('*', { count: 'exact', head: true })
-
-const { data: approvedOrders } = await supabaseAdmin
-  .from('orders')
-  .select('amount_cents')
-  .eq('status', 'approved')
-
-const totalRevenue = (approvedOrders || []).reduce((sum, o) => sum + (o.amount_cents || 0), 0)
-
-const { data: monthOrders } = await supabaseAdmin
-  .from('orders')
-  .select('amount_cents')
-  .eq('status', 'approved')
-  .gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
-
-const monthRevenue = (monthOrders || []).reduce((sum, o) => sum + (o.amount_cents || 0), 0)
 ---
 
 <AdminLayout title="Financeiro">
-  <h1 class="text-2xl font-display font-bold text-dourado mb-6">Financeiro</h1>
+  <div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-dourado mb-8">Financeiro</h1>
 
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-    <div class="card p-5">
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-2xl">📦</span>
-        <span class="text-xs uppercase tracking-wider text-text-muted">Total Pedidos</span>
+    <!-- Cards de Estatísticas -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div class="bg-azul-profundo rounded-lg p-6">
+        <div class="text-text-muted text-sm mb-2">Receita Total</div>
+        <div class="text-3xl font-bold text-verde-claro" id="stat-total-revenue">R$ 0,00</div>
       </div>
-      <p class="text-3xl font-display font-bold text-dourado">{totalOrders || 0}</p>
+      <div class="bg-azul-profundo rounded-lg p-6">
+        <div class="text-text-muted text-sm mb-2">Receita do Mês</div>
+        <div class="text-3xl font-bold text-verde-claro" id="stat-month-revenue">R$ 0,00</div>
+      </div>
+      <div class="bg-azul-profundo rounded-lg p-6">
+        <div class="text-text-muted text-sm mb-2">Pedidos Pendentes</div>
+        <div class="text-3xl font-bold text-dourado" id="stat-pending-count">0</div>
+        <div class="text-sm text-text-muted mt-1" id="stat-pending-amount">R$ 0,00</div>
+      </div>
+      <div class="bg-azul-profundo rounded-lg p-6">
+        <div class="text-text-muted text-sm mb-2">Aprovados Hoje</div>
+        <div class="text-3xl font-bold text-verde-claro" id="stat-approved-today">0</div>
+        <div class="text-sm text-text-muted mt-1" id="stat-approved-today-amount">R$ 0,00</div>
+      </div>
     </div>
-    <div class="card p-5">
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-2xl">💰</span>
-        <span class="text-xs uppercase tracking-wider text-text-muted">Receita Total</span>
+
+    <!-- Filtros -->
+    <div class="bg-azul-profundo rounded-lg p-6 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-text-muted text-sm mb-2">Buscar</label>
+          <input 
+            type="text" 
+            id="search-input"
+            placeholder="Nome, email ou número do pedido..."
+            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+          />
+        </div>
+        <div>
+          <label class="block text-text-muted text-sm mb-2">Status</label>
+          <select 
+            id="status-filter"
+            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+          >
+            <option value="">Todos</option>
+            <option value="pending">Pendentes</option>
+            <option value="approved">Aprovados</option>
+            <option value="rejected">Rejeitados</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button 
+            onclick="loadOrders()"
+            class="w-full bg-verde-principal hover:bg-verde-escuro text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+          >
+            Filtrar
+          </button>
+        </div>
       </div>
-      <p class="text-3xl font-display font-bold text-verde-claro">R$ {(totalRevenue / 100).toFixed(0)}</p>
     </div>
-    <div class="card p-5">
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-2xl">📅</span>
-        <span class="text-xs uppercase tracking-wider text-text-muted">Receita Mês</span>
+
+    <!-- Tabela de Pedidos -->
+    <div class="bg-azul-profundo rounded-lg overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-bg-dark/50">
+            <tr>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Número</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Aluno</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Produto</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Valor</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Status</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Data</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="orders-table">
+            <tr>
+              <td colspan="7" class="px-6 py-8 text-center text-text-muted">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-dourado mx-auto"></div>
+                <p class="mt-2">Carregando...</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <p class="text-3xl font-display font-bold text-verde-claro">R$ {(monthRevenue / 100).toFixed(0)}</p>
-    </div>
-    <div class="card p-5">
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-2xl">✅</span>
-        <span class="text-xs uppercase tracking-wider text-text-muted">Aprovados</span>
+
+      <!-- Paginação -->
+      <div class="px-6 py-4 bg-bg-dark/50 flex justify-between items-center">
+        <div class="text-text-muted text-sm">
+          Mostrando <span id="showing-start">0</span> a <span id="showing-end">0</span> de <span id="total-items">0</span> pedidos
+        </div>
+        <div class="flex gap-2" id="pagination-controls">
+          <!-- Botões de paginação serão inseridos via JS -->
+        </div>
       </div>
-      <p class="text-3xl font-display font-bold text-dourado">{approvedOrders?.length || 0}</p>
     </div>
   </div>
 
-  <div class="card p-6 mb-6">
-    <h2 class="font-bold text-dourado mb-4">Filtros</h2>
-    <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div>
-        <label class="block text-sm font-medium text-text-muted mb-2">Status</label>
-        <select name="status" class="input">
-          <option value="all" selected={statusFilter === 'all'}>Todos</option>
-          <option value="pending" selected={statusFilter === 'pending'}>Pendente</option>
-          <option value="approved" selected={statusFilter === 'approved'}>Aprovado</option>
-          <option value="refunded" selected={statusFilter === 'refunded'}>Reembolsado</option>
-          <option value="cancelled" selected={statusFilter === 'cancelled'}>Cancelado</option>
-        </select>
+  <!-- Modal de Detalhes do Pedido -->
+  <div id="order-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 overflow-y-auto">
+    <div class="bg-azul-profundo rounded-lg p-8 max-w-2xl w-full mx-4 my-8">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-dourado">Detalhes do Pedido</h2>
+        <button onclick="closeOrderModal()" class="text-text-muted hover:text-text-light text-2xl">&times;</button>
       </div>
-      <div>
-        <label class="block text-sm font-medium text-text-muted mb-2">De</label>
-        <input type="date" name="from" class="input" value={dateFrom || ''} />
+
+      <div id="order-details">
+        <!-- Detalhes serão inseridos via JS -->
       </div>
-      <div>
-        <label class="block text-sm font-medium text-text-muted mb-2">Até</label>
-        <input type="date" name="to" class="input" value={dateTo || ''} />
+
+      <div class="flex gap-4 mt-6">
+        <button 
+          onclick="closeOrderModal()"
+          class="flex-1 bg-bg-dark hover:bg-bg-dark/80 text-text-light px-6 py-3 rounded-lg font-semibold transition-colors"
+        >
+          Fechar
+        </button>
+        <button 
+          id="approve-btn"
+          onclick="approveOrder()"
+          class="flex-1 bg-verde-principal hover:bg-verde-escuro text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+        >
+          Aprovar Pedido
+        </button>
+        <button 
+          id="reject-btn"
+          onclick="openRejectModal()"
+          class="flex-1 bg-vermelho hover:bg-vermelho/80 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+        >
+          Rejeitar Pedido
+        </button>
       </div>
-      <div class="flex items-end">
-        <button type="submit" class="btn btn-primary w-full">Filtrar</button>
-      </div>
-    </form>
+    </div>
   </div>
 
-  <div class="card overflow-hidden">
-    <div class="p-4 border-b border-white/5 flex justify-between items-center">
-      <h2 class="font-bold text-dourado">Pedidos ({orders?.length || 0})</h2>
-      <button onclick="exportCSV()" class="btn btn-secondary text-sm">Exportar CSV</button>
+  <!-- Modal de Rejeição -->
+  <div id="reject-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50">
+    <div class="bg-azul-profundo rounded-lg p-8 max-w-md w-full mx-4">
+      <h2 class="text-2xl font-bold text-vermelho mb-6">Rejeitar Pedido</h2>
+      <form id="reject-form">
+        <div class="mb-6">
+          <label class="block text-text-muted text-sm mb-2">Motivo da Rejeição *</label>
+          <textarea 
+            id="reject-reason"
+            required
+            rows="4"
+            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+            placeholder="Descreva o motivo da rejeição..."
+          ></textarea>
+        </div>
+
+        <div class="flex gap-4">
+          <button 
+            type="button"
+            onclick="closeRejectModal()"
+            class="flex-1 bg-bg-dark hover:bg-bg-dark/80 text-text-light px-6 py-3 rounded-lg font-semibold transition-colors"
+          >
+            Cancelar
+          </button>
+          <button 
+            type="submit"
+            class="flex-1 bg-vermelho hover:bg-vermelho/80 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+          >
+            Rejeitar
+          </button>
+        </div>
+      </form>
     </div>
-    <table class="w-full text-sm">
-      <thead class="bg-white/5 text-text-muted">
-        <tr>
-          <th class="text-left p-4">Pedido</th>
-          <th class="text-left p-4">Cliente</th>
-          <th class="text-left p-4">Produto</th>
-          <th class="text-left p-4">Valor</th>
-          <th class="text-left p-4">Afiliado</th>
-          <th class="text-left p-4">Status</th>
-          <th class="text-left p-4">Data</th>
-        </tr>
-      </thead>
-      <tbody>
-        {(orders || []).map((o: any) => (
-          <tr class="border-t border-white/5">
-            <td class="p-4 font-mono text-xs">{o.order_number}</td>
-            <td class="p-4">
-              <p class="font-semibold">{o.user?.full_name || '—'}</p>
-              <p class="text-xs text-text-muted">{o.user?.email}</p>
-            </td>
-            <td class="p-4">{o.product?.title || '—'}</td>
-            <td class="p-4 text-dourado font-semibold">R$ {(o.amount_cents / 100).toFixed(2)}</td>
-            <td class="p-4 text-xs">{o.affiliate?.full_name || '—'}</td>
-            <td class="p-4">
-              <span class:list={[
-                'px-2 py-1 rounded text-xs',
-                o.status === 'approved' ? 'bg-verde-claro/20 text-verde-claro' :
-                o.status === 'pending' ? 'bg-dourado/20 text-dourado' :
-                o.status === 'refunded' ? 'bg-azul-accent/20 text-azul-accent' :
-                'bg-red-500/20 text-red-400'
-              ]}>
-                {o.status === 'approved' ? 'Aprovado' :
-                 o.status === 'pending' ? 'Pendente' :
-                 o.status === 'refunded' ? 'Reembolsado' : 'Cancelado'}
-              </span>
-            </td>
-            <td class="p-4 text-text-muted text-xs">{new Date(o.created_at).toLocaleDateString('pt-BR')}</td>
-          </tr>
-        ))}
-        {(!orders || orders.length === 0) && (
-          <tr>
-            <td colspan="7" class="p-8 text-center text-text-muted">Nenhum pedido encontrado</td>
-          </tr>
-        )}
-      </tbody>
-    </table>
   </div>
 </AdminLayout>
 
-<script define:vars={{ orders }}>
-  window.exportCSV = () => {
-    if (!orders || orders.length === 0) {
-      alert('Nenhum dado para exportar')
+<script>
+  let currentPage = 1
+  let currentSearch = ''
+  let currentStatus = ''
+  let currentOrderId = ''
+
+  async function loadOverview() {
+    try {
+      const response = await fetch('/admin/api/financial/overview')
+      const data = await response.json()
+
+      document.getElementById('stat-total-revenue').textContent = `R$ ${(data.total_revenue_cents / 100).toFixed(2)}`
+      document.getElementById('stat-month-revenue').textContent = `R$ ${(data.month_revenue_cents / 100).toFixed(2)}`
+      document.getElementById('stat-pending-count').textContent = data.pending_orders_count
+      document.getElementById('stat-pending-amount').textContent = `R$ ${(data.pending_amount_cents / 100).toFixed(2)}`
+      document.getElementById('stat-approved-today').textContent = data.approved_today_count
+      document.getElementById('stat-approved-today-amount').textContent = `R$ ${(data.approved_today_amount_cents / 100).toFixed(2)}`
+    } catch (error) {
+      console.error('Erro ao carregar visão geral:', error)
+    }
+  }
+
+  async function loadOrders() {
+    currentSearch = document.getElementById('search-input').value
+    currentStatus = document.getElementById('status-filter').value
+
+    const params = new URLSearchParams({
+      page: currentPage.toString(),
+      limit: '20',
+      search: currentSearch,
+      status: currentStatus,
+    })
+
+    try {
+      const response = await fetch(`/admin/api/financial/orders?${params}`)
+      const data = await response.json()
+
+      renderOrders(data.orders)
+      renderPagination(data)
+    } catch (error) {
+      console.error('Erro ao carregar pedidos:', error)
+      document.getElementById('orders-table').innerHTML = `
+        <tr>
+          <td colspan="7" class="px-6 py-8 text-center text-vermelho">
+            Erro ao carregar pedidos
+          </td>
+        </tr>
+      `
+    }
+  }
+
+  function renderOrders(orders) {
+    const tbody = document.getElementById('orders-table')
+    
+    if (orders.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="px-6 py-8 text-center text-text-muted">
+            Nenhum pedido encontrado
+          </td>
+        </tr>
+      `
       return
     }
 
-    const headers = ['Pedido', 'Cliente', 'Email', 'Produto', 'Valor', 'Afiliado', 'Status', 'Data']
-    const rows = orders.map((o: any) => [
-      o.order_number,
-      o.user?.full_name || '',
-      o.user?.email || '',
-      o.product?.title || '',
-      (o.amount_cents / 100).toFixed(2),
-      o.affiliate?.full_name || '',
-      o.status,
-      new Date(o.created_at).toLocaleDateString('pt-BR'),
-    ])
+    tbody.innerHTML = orders.map(order => {
+      const statusLabel = {
+        pending: 'Pendente',
+        approved: 'Aprovado',
+        rejected: 'Rejeitado'
+      }[order.status]
+      const statusColor = {
+        pending: 'text-dourado',
+        approved: 'text-verde-claro',
+        rejected: 'text-vermelho'
+      }[order.status]
 
-    const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `pedidos-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+      return `
+        <tr class="border-t border-verde-principal/10 hover:bg-bg-dark/30">
+          <td class="px-6 py-4 text-text-light font-mono text-sm">${order.order_number}</td>
+          <td class="px-6 py-4">
+            <div class="text-text-light">${order.user_name || '—'}</div>
+            <div class="text-text-muted text-sm">${order.user_email || '—'}</div>
+          </td>
+          <td class="px-6 py-4 text-text-muted">${order.product_title || '—'}</td>
+          <td class="px-6 py-4 text-verde-claro font-semibold">
+            R$ ${((order.amount_cents || 0) / 100).toFixed(2)}
+          </td>
+          <td class="px-6 py-4">
+            <span class="${statusColor} font-semibold">${statusLabel}</span>
+          </td>
+          <td class="px-6 py-4 text-text-muted">
+            ${new Date(order.created_at).toLocaleDateString('pt-BR')}
+          </td>
+          <td class="px-6 py-4">
+            <button 
+              onclick="openOrderModal('${order.id}')"
+              class="text-dourado hover:text-dourado/80 text-sm"
+            >
+              Ver Detalhes
+            </button>
+          </td>
+        </tr>
+      `
+    }).join('')
   }
+
+  function renderPagination(data) {
+    const { page, totalPages, total, orders } = data
+    const start = (page - 1) * 20 + 1
+    const end = Math.min(page * 20, total)
+
+    document.getElementById('showing-start').textContent = start
+    document.getElementById('showing-end').textContent = end
+    document.getElementById('total-items').textContent = total
+
+    const controls = document.getElementById('pagination-controls')
+    let html = ''
+
+    if (page > 1) {
+      html += `<button onclick="goToPage(${page - 1})" class="px-4 py-2 bg-bg-dark hover:bg-bg-dark/80 text-text-light rounded-lg">Anterior</button>`
+    }
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === page) {
+        html += `<button class="px-4 py-2 bg-verde-principal text-white rounded-lg">${i}</button>`
+      } else if (i === 1 || i === totalPages || (i >= page - 2 && i <= page + 2)) {
+        html += `<button onclick="goToPage(${i})" class="px-4 py-2 bg-bg-dark hover:bg-bg-dark/80 text-text-light rounded-lg">${i}</button>`
+      } else if (i === page - 3 || i === page + 3) {
+        html += `<span class="px-2 text-text-muted">...</span>`
+      }
+    }
+
+    if (page < totalPages) {
+      html += `<button onclick="goToPage(${page + 1})" class="px-4 py-2 bg-bg-dark hover:bg-bg-dark/80 text-text-light rounded-lg">Próximo</button>`
+    }
+
+    controls.innerHTML = html
+  }
+
+  function goToPage(page) {
+    currentPage = page
+    loadOrders()
+  }
+
+  async function openOrderModal(id) {
+    currentOrderId = id
+    try {
+      const response = await fetch(`/admin/api/financial/orders/${id}`)
+      const data = await response.json()
+      const order = data.order
+
+      const details = document.getElementById('order-details')
+      details.innerHTML = `
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <div class="text-text-muted text-sm">Número do Pedido</div>
+              <div class="text-text-light font-mono">${order.order_number}</div>
+            </div>
+            <div>
+              <div class="text-text-muted text-sm">Status</div>
+              <div class="text-text-light font-semibold">${order.status}</div>
+            </div>
+          </div>
+          <div>
+            <div class="text-text-muted text-sm">Aluno</div>
+            <div class="text-text-light">${order.user_name}</div>
+            <div class="text-text-muted text-sm">${order.user_email}</div>
+            ${order.user_whatsapp ? `<div class="text-text-muted text-sm">${order.user_whatsapp}</div>` : ''}
+          </div>
+          <div>
+            <div class="text-text-muted text-sm">Produto</div>
+            <div class="text-text-light">${order.product_title}</div>
+          </div>
+          <div>
+            <div class="text-text-muted text-sm">Valor</div>
+            <div class="text-verde-claro text-2xl font-bold">R$ ${((order.amount_cents || 0) / 100).toFixed(2)}</div>
+          </div>
+          ${order.payment_proof_url ? `
+            <div>
+              <div class="text-text-muted text-sm mb-2">Comprovante de Pagamento</div>
+              <img src="${order.payment_proof_url}" alt="Comprovante" class="w-full rounded-lg border border-verde-principal/30" />
+            </div>
+          ` : ''}
+          <div>
+            <div class="text-text-muted text-sm">Data do Pedido</div>
+            <div class="text-text-light">${new Date(order.created_at).toLocaleString('pt-BR')}</div>
+          </div>
+          ${order.approved_at ? `
+            <div>
+              <div class="text-text-muted text-sm">Aprovado em</div>
+              <div class="text-verde-claro">${new Date(order.approved_at).toLocaleString('pt-BR')}</div>
+            </div>
+          ` : ''}
+          ${order.rejected_at ? `
+            <div>
+              <div class="text-text-muted text-sm">Rejeitado em</div>
+              <div class="text-vermelho">${new Date(order.rejected_at).toLocaleString('pt-BR')}</div>
+              <div class="text-text-muted text-sm mt-1">Motivo: ${order.rejection_reason}</div>
+            </div>
+          ` : ''}
+        </div>
+      `
+
+      const approveBtn = document.getElementById('approve-btn')
+      const rejectBtn = document.getElementById('reject-btn')
+
+      if (order.status === 'pending') {
+        approveBtn.classList.remove('hidden')
+        rejectBtn.classList.remove('hidden')
+      } else {
+        approveBtn.classList.add('hidden')
+        rejectBtn.classList.add('hidden')
+      }
+
+      document.getElementById('order-modal').classList.remove('hidden')
+      document.getElementById('order-modal').classList.add('flex')
+    } catch (error) {
+      alert('Erro ao carregar detalhes do pedido')
+    }
+  }
+
+  function closeOrderModal() {
+    document.getElementById('order-modal').classList.add('hidden')
+    document.getElementById('order-modal').classList.remove('flex')
+  }
+
+  async function approveOrder() {
+    if (!confirm('Tem certeza que deseja aprovar este pedido? O aluno receberá acesso imediato ao produto.')) return
+
+    try {
+      const response = await fetch(`/admin/api/financial/orders/${currentOrderId}/approve`, {
+        method: 'POST',
+      })
+
+      if (response.ok) {
+        alert('Pedido aprovado com sucesso!')
+        closeOrderModal()
+        loadOverview()
+        loadOrders()
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Erro ao aprovar pedido')
+      }
+    } catch (error) {
+      alert('Erro ao aprovar pedido')
+    }
+  }
+
+  function openRejectModal() {
+    document.getElementById('reject-reason').value = ''
+    document.getElementById('reject-modal').classList.remove('hidden')
+    document.getElementById('reject-modal').classList.add('flex')
+  }
+
+  function closeRejectModal() {
+    document.getElementById('reject-modal').classList.add('hidden')
+    document.getElementById('reject-modal').classList.remove('flex')
+  }
+
+  document.getElementById('reject-form').addEventListener('submit', async (e) => {
+    e.preventDefault()
+
+    const reason = document.getElementById('reject-reason').value
+
+    try {
+      const response = await fetch(`/admin/api/financial/orders/${currentOrderId}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      })
+
+      if (response.ok) {
+        alert('Pedido rejeitado com sucesso!')
+        closeRejectModal()
+        closeOrderModal()
+        loadOverview()
+        loadOrders()
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Erro ao rejeitar pedido')
+      }
+    } catch (error) {
+      alert('Erro ao rejeitar pedido')
+    }
+  })
+
+  loadOverview()
+  loadOrders()
 </script>
