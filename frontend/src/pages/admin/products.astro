@@ -592,14 +592,13 @@ if (!session?.profile || !isAdmin(session.profile)) {
     }
   })
 
-  // Expor funções para escopo global (onclick inline)
-  window.openCreateModal = openCreateModal
-  window.openEditModal = openEditModal
-  window.closeProductModal = closeProductModal
-  window.openContentEditor = openContentEditor
-  window.closeContentModal = closeContentModal
-  window.publishProduct = publishProduct
-  window.unpublishProduct = unpublishProduct
+  window.addModule = addModule
+  window.removeModule = removeModule
+  window.updateModuleTitle = updateModuleTitle
+  window.addLesson = addLesson
+  window.removeLesson = removeLesson
+  window.updateLessonTitle = updateLessonTitle
+  window.updateLessonVideo = updateLessonVideo
 
   loadProducts()
 </script>
