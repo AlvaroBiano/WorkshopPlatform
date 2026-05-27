@@ -10,13 +10,13 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const result = await db.execute({
-      sql: `SELECT * FROM coupons 
-            WHERE code = ? AND is_active = 1 
+      sql: `SELECT * FROM coupons
+            WHERE code = ? AND is_active = 1
             AND (valid_from IS NULL OR valid_from <= datetime('now'))
             AND (valid_until IS NULL OR valid_until >= datetime('now'))
             AND (product_id IS NULL OR product_id = ?)
             AND (max_uses IS NULL OR used_count < max_uses)`,
-      args: [code.toUpperCase(), product_id],
+      args: [code.toUpperCase(), product_id || null],
     })
 
     if (result.rows.length === 0) {

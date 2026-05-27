@@ -9,6 +9,9 @@ CREATE TABLE coupons (
     discount_type TEXT NOT NULL CHECK (discount_type IN ('percentage', 'fixed')),
     discount_value INTEGER NOT NULL,
     max_uses INTEGER,
+    used_count INTEGER DEFAULT 0,
+    valid_from TIMESTAMPTZ,
+    valid_until TIMESTAMPTZ,
     product_id UUID REFERENCES products(id) ON DELETE SET NULL,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW()
