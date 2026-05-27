@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro'
-import { db } from '../../../../../../lib/turso'
-import { getSessionFromCookies, isAdmin } from '../../../../../../lib/auth'
+import { db } from '../../../../../../../lib/turso'
+import { getSessionFromCookies, isAdmin } from '../../../../../../../lib/auth'
 
 export const PUT: APIRoute = async ({ request, cookies, params }) => {
   const session = await getSessionFromCookies(cookies)
@@ -8,8 +8,8 @@ export const PUT: APIRoute = async ({ request, cookies, params }) => {
     return new Response('Forbidden', { status: 403 })
   }
 
-  const { productId, moduleId } = params
-  if (!productId || !moduleId) {
+  const { productId, moduleId, lessonId } = params
+  if (!productId || !moduleId || !lessonId) {
     return new Response(JSON.stringify({ error: 'IDs são obrigatórios' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
@@ -17,15 +17,19 @@ export const PUT: APIRoute = async ({ request, cookies, params }) => {
   }
 
   try {
-    const { title, sort_order } = await request.json()
+    const { title, video_url, duration_sec, sort_order } = await request.json()
 
-    const existingModule = await db.execute({
-      sql: 'SELECT * FROM modules WHERE id = ? AND product_id = ?',
-      args: [moduleId, productId],
+    const existingLesson = await db.execute({
+      sql: `
+        SELECT l.* FROM lessons l
+        INNER JOIN modules m ON l.module_id = m.id
+        WHERE l.id = ? AND m.id = ? AND m.product_id = ?
+      `,
+      args: [lessonId, moduleId, productId],
     })
 
-    if (existingModule.rows.length === 0) {
-      return new Response(JSON.stringify({ error: 'Módulo não encontrado' }), {
+    if (existingLesson.rows.length === 0) {
+      return new Response(JSON.stringify({ error: 'Aula não encontrada' }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' },
       })
@@ -47,6 +51,16 @@ export const PUT: APIRoute = async ({ request, cookies, params }) => {
       args.push(slug)
     }
 
+    if (video_url !== undefined) {
+      updates.push('video_url = ?')
+      args.push(video_url)
+    }
+
+    if (duration_sec !== undefined) {
+      updates.push('duration_sec = ?')
+      args.push(duration_sec)
+    }
+
     if (sort_order !== undefined) {
       updates.push('sort_order = ?')
       args.push(sort_order)
@@ -59,41 +73,41 @@ export const PUT: APIRoute = async ({ request, cookies, params }) => {
       })
     }
 
-    args.push(moduleId)
+    args.push(lessonId)
 
     await db.execute({
-      sql: `UPDATE modules SET ${updates.join(', ')} WHERE id = ?`,
+      sql: `UPDATE lessons SET ${updates.join(', ')} WHERE id = ?`,
       args,
     })
 
     await db.execute({
       sql: `
         INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details, ip_address, created_at)
-        VALUES (?, ?, 'UPDATE_MODULE', 'modules', ?, ?, ?, datetime('now'))
+        VALUES (?, ?, 'UPDATE_LESSON', 'lessons', ?, ?, ?, datetime('now'))
       `,
       args: [
         crypto.randomUUID(),
         session.profile.id,
-        moduleId,
-        JSON.stringify({ title, sort_order, product_id: productId }),
+        lessonId,
+        JSON.stringify({ title, video_url, duration_sec, module_id: moduleId }),
         request.headers.get('x-forwarded-for') || 'unknown',
       ],
     })
 
-    const updatedModule = await db.execute({
-      sql: 'SELECT * FROM modules WHERE id = ?',
-      args: [moduleId],
+    const updatedLesson = await db.execute({
+      sql: 'SELECT * FROM lessons WHERE id = ?',
+      args: [lessonId],
     })
 
     return new Response(JSON.stringify({
       success: true,
-      module: updatedModule.rows[0],
+      lesson: updatedLesson.rows[0],
     }), {
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (error) {
-    console.error('Error updating module:', error)
-    return new Response(JSON.stringify({ error: 'Erro ao atualizar módulo' }), {
+    console.error('Error updating lesson:', error)
+    return new Response(JSON.stringify({ error: 'Erro ao atualizar aula' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     })
@@ -106,8 +120,8 @@ export const DELETE: APIRoute = async ({ request, cookies, params }) => {
     return new Response('Forbidden', { status: 403 })
   }
 
-  const { productId, moduleId } = params
-  if (!productId || !moduleId) {
+  const { productId, moduleId, lessonId } = params
+  if (!productId || !moduleId || !lessonId) {
     return new Response(JSON.stringify({ error: 'IDs são obrigatórios' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
@@ -115,46 +129,50 @@ export const DELETE: APIRoute = async ({ request, cookies, params }) => {
   }
 
   try {
-    const existingModule = await db.execute({
-      sql: 'SELECT * FROM modules WHERE id = ? AND product_id = ?',
-      args: [moduleId, productId],
+    const existingLesson = await db.execute({
+      sql: `
+        SELECT l.* FROM lessons l
+        INNER JOIN modules m ON l.module_id = m.id
+        WHERE l.id = ? AND m.id = ? AND m.product_id = ?
+      `,
+      args: [lessonId, moduleId, productId],
     })
 
-    if (existingModule.rows.length === 0) {
-      return new Response(JSON.stringify({ error: 'Módulo não encontrado' }), {
+    if (existingLesson.rows.length === 0) {
+      return new Response(JSON.stringify({ error: 'Aula não encontrada' }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' },
       })
     }
 
     await db.execute({
-      sql: 'DELETE FROM modules WHERE id = ?',
-      args: [moduleId],
+      sql: 'DELETE FROM lessons WHERE id = ?',
+      args: [lessonId],
     })
 
     await db.execute({
       sql: `
         INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details, ip_address, created_at)
-        VALUES (?, ?, 'DELETE_MODULE', 'modules', ?, ?, ?, datetime('now'))
+        VALUES (?, ?, 'DELETE_LESSON', 'lessons', ?, ?, ?, datetime('now'))
       `,
       args: [
         crypto.randomUUID(),
         session.profile.id,
-        moduleId,
-        JSON.stringify({ product_id: productId }),
+        lessonId,
+        JSON.stringify({ module_id: moduleId }),
         request.headers.get('x-forwarded-for') || 'unknown',
       ],
     })
 
     return new Response(JSON.stringify({
       success: true,
-      message: 'Módulo removido com sucesso',
+      message: 'Aula removida com sucesso',
     }), {
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (error) {
-    console.error('Error deleting module:', error)
-    return new Response(JSON.stringify({ error: 'Erro ao remover módulo' }), {
+    console.error('Error deleting lesson:', error)
+    return new Response(JSON.stringify({ error: 'Erro ao remover aula' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     })

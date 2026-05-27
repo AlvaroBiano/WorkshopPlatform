@@ -1,0 +1,608 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro'
+import { getSessionFromCookies, isAdmin } from '../../lib/auth'
+
+const session = await getSessionFromCookies(Astro.cookies)
+if (!session?.profile || !isAdmin(session.profile)) {
+  return Astro.redirect('/login')
+}
+---
+
+<AdminLayout title="Gestão de Produtos">
+  <div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-8">
+      <h1 class="text-3xl font-bold text-dourado">Gestão de Produtos</h1>
+      <button 
+        onclick="openCreateModal()"
+        class="bg-verde-principal hover:bg-verde-escuro text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+      >
+        + Novo Produto
+      </button>
+    </div>
+
+    <!-- Lista de Produtos -->
+    <div id="products-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="col-span-full text-center py-12">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-dourado mx-auto"></div>
+        <p class="mt-4 text-text-muted">Carregando produtos...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Criar/Editar Produto -->
+  <div id="product-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 overflow-y-auto">
+    <div class="bg-azul-profundo rounded-lg p-8 max-w-2xl w-full mx-4 my-8">
+      <h2 id="modal-title" class="text-2xl font-bold text-dourado mb-6">Novo Produto</h2>
+      <form id="product-form">
+        <input type="hidden" id="product-id" />
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-text-muted text-sm mb-2">Título *</label>
+            <input 
+              type="text" 
+              id="product-title"
+              required
+              class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+            />
+          </div>
+
+          <div>
+            <label class="block text-text-muted text-sm mb-2">Tipo</label>
+            <select 
+              id="product-type"
+              class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+            >
+              <option value="course">Curso</option>
+              <option value="workshop">Workshop</option>
+              <option value="ebook">E-book</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-text-muted text-sm mb-2">Descrição</label>
+          <textarea 
+            id="product-description"
+            rows="3"
+            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+          ></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-text-muted text-sm mb-2">Preço (R$)</label>
+            <input 
+              type="number" 
+              id="product-price"
+              step="0.01"
+              min="0"
+              class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+            />
+          </div>
+
+          <div>
+            <label class="block text-text-muted text-sm mb-2">URL da Capa</label>
+            <input 
+              type="url" 
+              id="product-cover"
+              placeholder="https://..."
+              class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+            />
+          </div>
+        </div>
+
+        <div class="mb-6">
+          <label class="flex items-center gap-2 cursor-pointer mb-2">
+            <input 
+              type="checkbox" 
+              id="product-affiliable"
+              class="w-4 h-4 accent-verde-principal"
+            />
+            <span class="text-text-light text-sm">Habilitar programa de afiliados</span>
+          </label>
+          <div id="commission-field" class="hidden">
+            <label class="block text-text-muted text-sm mb-2">Comissão (%)</label>
+            <input 
+              type="number" 
+              id="product-commission"
+              min="0"
+              max="100"
+              value="40"
+              class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+            />
+          </div>
+        </div>
+
+        <div class="flex gap-4">
+          <button 
+            type="button"
+            onclick="closeProductModal()"
+            class="flex-1 bg-bg-dark hover:bg-bg-dark/80 text-text-light px-6 py-3 rounded-lg font-semibold transition-colors"
+          >
+            Cancelar
+          </button>
+          <button 
+            type="submit"
+            class="flex-1 bg-verde-principal hover:bg-verde-escuro text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+          >
+            Salvar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de Editor de Conteúdo -->
+  <div id="content-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 overflow-y-auto">
+    <div class="bg-azul-profundo rounded-lg p-8 max-w-4xl w-full mx-4 my-8">
+      <div class="flex justify-between items-center mb-6">
+        <h2 id="content-modal-title" class="text-2xl font-bold text-dourado">Editor de Conteúdo</h2>
+        <button onclick="closeContentModal()" class="text-text-muted hover:text-text-light text-2xl">&times;</button>
+      </div>
+
+      <div id="modules-container" class="space-y-4 mb-6">
+        <!-- Módulos serão inseridos via JS -->
+      </div>
+
+      <button 
+        onclick="addModule()"
+        class="w-full bg-bg-dark hover:bg-bg-dark/80 text-dourado px-6 py-3 rounded-lg font-semibold transition-colors border-2 border-dashed border-dourado/30"
+      >
+        + Adicionar Módulo
+      </button>
+
+      <div class="flex gap-4 mt-6">
+        <button 
+          onclick="closeContentModal()"
+          class="flex-1 bg-bg-dark hover:bg-bg-dark/80 text-text-light px-6 py-3 rounded-lg font-semibold transition-colors"
+        >
+          Fechar
+        </button>
+        <button 
+          onclick="saveContent()"
+          class="flex-1 bg-verde-principal hover:bg-verde-escuro text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+        >
+          Salvar Alterações
+        </button>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  let currentProductId = ''
+  let products = []
+
+  async function loadProducts() {
+    try {
+      const response = await fetch('/admin/api/products')
+      const data = await response.json()
+      products = data.products
+      renderProducts()
+    } catch (error) {
+      console.error('Erro ao carregar produtos:', error)
+      document.getElementById('products-grid').innerHTML = `
+        <div class="col-span-full text-center py-12 text-vermelho">
+          Erro ao carregar produtos
+        </div>
+      `
+    }
+  }
+
+  function renderProducts() {
+    const grid = document.getElementById('products-grid')
+    
+    if (products.length === 0) {
+      grid.innerHTML = `
+        <div class="col-span-full text-center py-12 text-text-muted">
+          Nenhum produto cadastrado
+        </div>
+      `
+      return
+    }
+
+    grid.innerHTML = products.map(product => {
+      const statusLabel = {
+        draft: 'Rascunho',
+        published: 'Publicado',
+        archived: 'Arquivado'
+      }[product.status]
+      const statusColor = {
+        draft: 'text-text-muted',
+        published: 'text-verde-claro',
+        archived: 'text-vermelho'
+      }[product.status]
+
+      return `
+        <div class="bg-azul-profundo rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+          ${product.cover_url ? `
+            <img src="${product.cover_url}" alt="${product.title}" class="w-full h-48 object-cover" />
+          ` : `
+            <div class="w-full h-48 bg-bg-dark flex items-center justify-center">
+              <span class="text-6xl">📦</span>
+            </div>
+          `}
+          <div class="p-6">
+            <div class="flex justify-between items-start mb-2">
+              <h3 class="text-xl font-bold text-dourado">${product.title}</h3>
+              <span class="${statusColor} text-sm font-semibold">${statusLabel}</span>
+            </div>
+            <p class="text-text-muted text-sm mb-4 line-clamp-2">${product.description || 'Sem descrição'}</p>
+            <div class="grid grid-cols-3 gap-2 mb-4 text-center">
+              <div>
+                <div class="text-2xl font-bold text-text-light">${product.modules_count || 0}</div>
+                <div class="text-xs text-text-muted">Módulos</div>
+              </div>
+              <div>
+                <div class="text-2xl font-bold text-text-light">${product.lessons_count || 0}</div>
+                <div class="text-xs text-text-muted">Aulas</div>
+              </div>
+              <div>
+                <div class="text-2xl font-bold text-text-light">${product.students_count || 0}</div>
+                <div class="text-xs text-text-muted">Alunos</div>
+              </div>
+            </div>
+            <div class="text-2xl font-bold text-verde-claro mb-4">
+              R$ ${((product.price_cents || 0) / 100).toFixed(2)}
+            </div>
+            <div class="flex gap-2">
+              <button 
+                onclick="openEditModal('${product.id}')"
+                class="flex-1 bg-bg-dark hover:bg-bg-dark/80 text-text-light px-4 py-2 rounded-lg text-sm transition-colors"
+              >
+                Editar
+              </button>
+              <button 
+                onclick="openContentEditor('${product.id}')"
+                class="flex-1 bg-dourado/20 hover:bg-dourado/30 text-dourado px-4 py-2 rounded-lg text-sm transition-colors"
+              >
+                Conteúdo
+              </button>
+              ${product.status === 'published' ? `
+                <button 
+                  onclick="unpublishProduct('${product.id}')"
+                  class="bg-vermelho/20 hover:bg-vermelho/30 text-vermelho px-4 py-2 rounded-lg text-sm transition-colors"
+                >
+                  Despublicar
+                </button>
+              ` : `
+                <button 
+                  onclick="publishProduct('${product.id}')"
+                  class="bg-verde-principal/20 hover:bg-verde-principal/30 text-verde-claro px-4 py-2 rounded-lg text-sm transition-colors"
+                >
+                  Publicar
+                </button>
+              `}
+            </div>
+          </div>
+        </div>
+      `
+    }).join('')
+  }
+
+  function openCreateModal() {
+    document.getElementById('modal-title').textContent = 'Novo Produto'
+    document.getElementById('product-id').value = ''
+    document.getElementById('product-title').value = ''
+    document.getElementById('product-description').value = ''
+    document.getElementById('product-price').value = ''
+    document.getElementById('product-type').value = 'course'
+    document.getElementById('product-cover').value = ''
+    document.getElementById('product-affiliable').checked = false
+    document.getElementById('product-commission').value = '40'
+    document.getElementById('commission-field').classList.add('hidden')
+    document.getElementById('product-modal').classList.remove('hidden')
+    document.getElementById('product-modal').classList.add('flex')
+  }
+
+  async function openEditModal(id) {
+    try {
+      const response = await fetch(`/admin/api/products/${id}`)
+      const data = await response.json()
+      const product = data.product
+
+      document.getElementById('modal-title').textContent = 'Editar Produto'
+      document.getElementById('product-id').value = product.id
+      document.getElementById('product-title').value = product.title
+      document.getElementById('product-description').value = product.description || ''
+      document.getElementById('product-price').value = (product.price_cents / 100).toFixed(2)
+      document.getElementById('product-type').value = product.type
+      document.getElementById('product-cover').value = product.cover_url || ''
+      document.getElementById('product-affiliable').checked = product.is_affiliable
+      document.getElementById('product-commission').value = product.affiliate_commission_pct || 40
+      
+      if (product.is_affiliable) {
+        document.getElementById('commission-field').classList.remove('hidden')
+      }
+
+      document.getElementById('product-modal').classList.remove('hidden')
+      document.getElementById('product-modal').classList.add('flex')
+    } catch (error) {
+      alert('Erro ao carregar dados do produto')
+    }
+  }
+
+  function closeProductModal() {
+    document.getElementById('product-modal').classList.add('hidden')
+    document.getElementById('product-modal').classList.remove('flex')
+  }
+
+  async function openContentEditor(id) {
+    currentProductId = id
+    try {
+      const response = await fetch(`/admin/api/products/${id}`)
+      const data = await response.json()
+      const product = data.product
+
+      document.getElementById('content-modal-title').textContent = `Editor: ${product.title}`
+      renderModules(product.modules || [])
+      
+      document.getElementById('content-modal').classList.remove('hidden')
+      document.getElementById('content-modal').classList.add('flex')
+    } catch (error) {
+      alert('Erro ao carregar conteúdo do produto')
+    }
+  }
+
+  function closeContentModal() {
+    document.getElementById('content-modal').classList.add('hidden')
+    document.getElementById('content-modal').classList.remove('flex')
+  }
+
+  function renderModules(modules) {
+    const container = document.getElementById('modules-container')
+    container.innerHTML = modules.map((module, moduleIndex) => `
+      <div class="bg-bg-dark rounded-lg p-4" data-module-id="${module.id}">
+        <div class="flex justify-between items-center mb-3">
+          <input 
+            type="text" 
+            value="${module.title}"
+            class="bg-transparent text-dourado font-bold text-lg focus:outline-none flex-1"
+            onchange="updateModuleTitle('${module.id}', this.value)"
+          />
+          <div class="flex gap-2">
+            <button 
+              onclick="addLesson('${module.id}')"
+              class="text-verde-claro hover:text-verde-claro/80 text-sm"
+            >
+              + Aula
+            </button>
+            <button 
+              onclick="removeModule('${module.id}')"
+              class="text-vermelho hover:text-vermelho/80 text-sm"
+            >
+              Remover
+            </button>
+          </div>
+        </div>
+        <div class="space-y-2" data-lessons-container="${module.id}">
+          ${(module.lessons || []).map((lesson, lessonIndex) => `
+            <div class="bg-azul-profundo rounded p-3 flex items-center gap-3" data-lesson-id="${lesson.id}">
+              <span class="text-text-muted text-sm">${lessonIndex + 1}.</span>
+              <input 
+                type="text" 
+                value="${lesson.title}"
+                class="bg-transparent text-text-light flex-1 focus:outline-none"
+                onchange="updateLessonTitle('${module.id}', '${lesson.id}', this.value)"
+              />
+              <input 
+                type="text" 
+                value="${lesson.video_url || ''}"
+                placeholder="URL do vídeo"
+                class="bg-bg-dark text-text-muted text-sm px-2 py-1 rounded w-48 focus:outline-none"
+                onchange="updateLessonVideo('${module.id}', '${lesson.id}', this.value)"
+              />
+              <button 
+                onclick="removeLesson('${module.id}', '${lesson.id}')"
+                class="text-vermelho hover:text-vermelho/80 text-sm"
+              >
+                ×
+              </button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('')
+  }
+
+  async function addModule() {
+    const title = prompt('Título do módulo:')
+    if (!title) return
+
+    try {
+      const response = await fetch(`/admin/api/products/${currentProductId}/modules`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      })
+
+      if (response.ok) {
+        openContentEditor(currentProductId)
+      } else {
+        alert('Erro ao criar módulo')
+      }
+    } catch (error) {
+      alert('Erro ao criar módulo')
+    }
+  }
+
+  async function removeModule(moduleId) {
+    if (!confirm('Tem certeza que deseja remover este módulo e todas as suas aulas?')) return
+
+    try {
+      const response = await fetch(`/admin/api/products/${currentProductId}/modules/${moduleId}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        openContentEditor(currentProductId)
+      } else {
+        alert('Erro ao remover módulo')
+      }
+    } catch (error) {
+      alert('Erro ao remover módulo')
+    }
+  }
+
+  async function updateModuleTitle(moduleId, title) {
+    try {
+      await fetch(`/admin/api/products/${currentProductId}/modules/${moduleId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      })
+    } catch (error) {
+      alert('Erro ao atualizar título do módulo')
+    }
+  }
+
+  async function addLesson(moduleId) {
+    const title = prompt('Título da aula:')
+    if (!title) return
+
+    try {
+      const response = await fetch(`/admin/api/products/${currentProductId}/modules/${moduleId}/lessons`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      })
+
+      if (response.ok) {
+        openContentEditor(currentProductId)
+      } else {
+        alert('Erro ao criar aula')
+      }
+    } catch (error) {
+      alert('Erro ao criar aula')
+    }
+  }
+
+  async function removeLesson(moduleId, lessonId) {
+    if (!confirm('Tem certeza que deseja remover esta aula?')) return
+
+    try {
+      const response = await fetch(`/admin/api/products/${currentProductId}/modules/${moduleId}/lessons/${lessonId}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        openContentEditor(currentProductId)
+      } else {
+        alert('Erro ao remover aula')
+      }
+    } catch (error) {
+      alert('Erro ao remover aula')
+    }
+  }
+
+  async function updateLessonTitle(moduleId, lessonId, title) {
+    try {
+      await fetch(`/admin/api/products/${currentProductId}/modules/${moduleId}/lessons/${lessonId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      })
+    } catch (error) {
+      alert('Erro ao atualizar título da aula')
+    }
+  }
+
+  async function updateLessonVideo(moduleId, lessonId, video_url) {
+    try {
+      await fetch(`/admin/api/products/${currentProductId}/modules/${moduleId}/lessons/${lessonId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ video_url }),
+      })
+    } catch (error) {
+      alert('Erro ao atualizar URL do vídeo')
+    }
+  }
+
+  async function publishProduct(id) {
+    if (!confirm('Tem certeza que deseja publicar este produto?')) return
+
+    try {
+      const response = await fetch(`/admin/api/products/${id}/publish`, {
+        method: 'POST',
+      })
+
+      if (response.ok) {
+        alert('Produto publicado com sucesso!')
+        loadProducts()
+      } else {
+        alert('Erro ao publicar produto')
+      }
+    } catch (error) {
+      alert('Erro ao publicar produto')
+    }
+  }
+
+  async function unpublishProduct(id) {
+    if (!confirm('Tem certeza que deseja despublicar este produto?')) return
+
+    try {
+      const response = await fetch(`/admin/api/products/${id}/unpublish`, {
+        method: 'POST',
+      })
+
+      if (response.ok) {
+        alert('Produto despublicado com sucesso!')
+        loadProducts()
+      } else {
+        alert('Erro ao despublicar produto')
+      }
+    } catch (error) {
+      alert('Erro ao despublicar produto')
+    }
+  }
+
+  document.getElementById('product-form').addEventListener('submit', async (e) => {
+    e.preventDefault()
+
+    const id = document.getElementById('product-id').value
+    const data = {
+      title: document.getElementById('product-title').value,
+      description: document.getElementById('product-description').value,
+      price_cents: Math.round(parseFloat(document.getElementById('product-price').value || '0') * 100),
+      type: document.getElementById('product-type').value,
+      cover_url: document.getElementById('product-cover').value,
+      is_affiliable: document.getElementById('product-affiliable').checked,
+      affiliate_commission_pct: parseFloat(document.getElementById('product-commission').value || '40'),
+    }
+
+    try {
+      const url = id ? `/admin/api/products/${id}` : '/admin/api/products'
+      const method = id ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+
+      if (response.ok) {
+        alert(id ? 'Produto atualizado com sucesso!' : 'Produto criado com sucesso!')
+        closeProductModal()
+        loadProducts()
+      } else {
+        const errorData = await response.json()
+        alert(errorData.error || 'Erro ao salvar produto')
+      }
+    } catch (error) {
+      alert('Erro ao salvar produto')
+    }
+  })
+
+  document.getElementById('product-affiliable').addEventListener('change', (e) => {
+    const commissionField = document.getElementById('commission-field')
+    if (e.target.checked) {
+      commissionField.classList.remove('hidden')
+    } else {
+      commissionField.classList.add('hidden')
+    }
+  })
+
+  loadProducts()
+</script>
