@@ -1,127 +1,448 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro'
-import { supabaseAdmin } from '../../lib/supabase-server'
+import { getSessionFromCookies, isAdmin } from '../../lib/auth'
 
-const { data: recentNotifications } = await supabaseAdmin
-  .from('notifications')
-  .select('*, user:users(full_name, email)')
-  .order('created_at', { ascending: false })
-  .limit(50)
+const session = await getSessionFromCookies(Astro.cookies)
+if (!session?.profile || !isAdmin(session.profile)) {
+  return Astro.redirect('/login')
+}
 ---
 
 <AdminLayout title="Mensagens">
-  <h1 class="text-2xl font-display font-bold text-dourado mb-6">Mensagens</h1>
-
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-    <div class="card p-6">
-      <h2 class="font-bold text-dourado mb-4">Enviar Notificação</h2>
-      <form id="notifForm" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-text-muted mb-2">Destinatário</label>
-          <select id="recipient" class="input">
-            <option value="all">Todos os alunos</option>
-            <option value="specific">Aluno específico</option>
-          </select>
-        </div>
-        <div id="specificUser" class="hidden">
-          <label class="block text-sm font-medium text-text-muted mb-2">E-mail do aluno</label>
-          <input type="email" id="user_email" class="input" placeholder="aluno@email.com" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-text-muted mb-2">Título</label>
-          <input type="text" id="title" class="input" required />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-text-muted mb-2">Mensagem</label>
-          <textarea id="body" class="input" rows="4" required></textarea>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-text-muted mb-2">Link (opcional)</label>
-          <input type="url" id="link_url" class="input" placeholder="/student" />
-        </div>
-        <div id="errorMsg" class="hidden p-3 rounded-lg text-sm bg-red-500/10 border border-red-500/30 text-red-400"></div>
-        <div id="successMsg" class="hidden p-3 rounded-lg text-sm bg-verde-claro/10 border border-verde-claro/30 text-verde-claro"></div>
-        <button type="submit" class="btn btn-primary w-full">Enviar Notificação</button>
-      </form>
+  <div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-8">
+      <h1 class="text-3xl font-bold text-dourado">Mensagens</h1>
+      <button 
+        onclick="openSendModal()"
+        class="bg-verde-principal hover:bg-verde-escuro text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+      >
+        + Nova Mensagem
+      </button>
     </div>
 
-    <div class="card p-6">
-      <h2 class="font-bold text-dourado mb-4">Estatísticas</h2>
-      <div class="space-y-3">
-        <div class="flex justify-between">
-          <span class="text-text-muted">Total de notificações enviadas</span>
-          <span class="font-semibold text-dourado">{recentNotifications?.length || 0}</span>
+    <!-- Filtros -->
+    <div class="bg-azul-profundo rounded-lg p-6 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-text-muted text-sm mb-2">Buscar</label>
+          <input 
+            type="text" 
+            id="search-input"
+            placeholder="Título, corpo ou destinatário..."
+            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+          />
         </div>
-        <div class="flex justify-between">
-          <span class="text-text-muted">Última notificação</span>
-          <span class="font-semibold text-dourado">
-            {recentNotifications?.[0] ? new Date(recentNotifications[0].created_at).toLocaleDateString('pt-BR') : '—'}
-          </span>
+        <div>
+          <label class="block text-text-muted text-sm mb-2">Tipo</label>
+          <select 
+            id="type-filter"
+            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+          >
+            <option value="">Todos</option>
+            <option value="info">Informação</option>
+            <option value="success">Sucesso</option>
+            <option value="warning">Aviso</option>
+            <option value="error">Erro</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button 
+            onclick="loadNotifications()"
+            class="w-full bg-verde-principal hover:bg-verde-escuro text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+          >
+            Filtrar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela de Notificações -->
+    <div class="bg-azul-profundo rounded-lg overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-bg-dark/50">
+            <tr>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Destinatário</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Título</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Tipo</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Lida</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Data</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="notifications-table">
+            <tr>
+              <td colspan="6" class="px-6 py-8 text-center text-text-muted">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-dourado mx-auto"></div>
+                <p class="mt-2">Carregando...</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginação -->
+      <div class="px-6 py-4 bg-bg-dark/50 flex justify-between items-center">
+        <div class="text-text-muted text-sm">
+          Mostrando <span id="showing-start">0</span> a <span id="showing-end">0</span> de <span id="total-items">0</span> notificações
+        </div>
+        <div class="flex gap-2" id="pagination-controls">
+          <!-- Botões de paginação serão inseridos via JS -->
         </div>
       </div>
     </div>
   </div>
 
-  <div class="card p-6">
-    <h2 class="font-bold text-dourado mb-4">Notificações Recentes</h2>
-    <div class="space-y-3">
-      {(recentNotifications || []).map((n: any) => (
-        <div class="p-4 bg-white/5 rounded-lg">
-          <div class="flex justify-between items-start mb-2">
-            <div>
-              <p class="font-semibold">{n.title}</p>
-              <p class="text-xs text-text-muted">{n.user?.full_name} · {n.user?.email}</p>
-            </div>
-            <span class="text-xs text-text-muted">{new Date(n.created_at).toLocaleString('pt-BR')}</span>
+  <!-- Modal de Enviar Mensagem -->
+  <div id="send-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 overflow-y-auto">
+    <div class="bg-azul-profundo rounded-lg p-8 max-w-2xl w-full mx-4 my-8">
+      <h2 class="text-2xl font-bold text-dourado mb-6">Nova Mensagem</h2>
+      <form id="send-form">
+        <div class="mb-4">
+          <label class="block text-text-muted text-sm mb-2">Destinatários</label>
+          <div class="flex gap-4 mb-2">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input 
+                type="radio" 
+                name="recipient-type" 
+                value="specific" 
+                checked
+                class="accent-verde-principal"
+                onchange="toggleRecipientType()"
+              />
+              <span class="text-text-light text-sm">Usuários específicos</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input 
+                type="radio" 
+                name="recipient-type" 
+                value="all"
+                class="accent-verde-principal"
+                onchange="toggleRecipientType()"
+              />
+              <span class="text-text-light text-sm">Todos os alunos</span>
+            </label>
           </div>
-          <p class="text-sm text-text-muted">{n.body}</p>
+          <select 
+            id="notification-users"
+            multiple
+            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal h-32"
+          >
+            <!-- Opções serão carregadas via JS -->
+          </select>
+          <p class="text-text-muted text-xs mt-1">Segure Ctrl/Cmd para selecionar múltiplos usuários</p>
         </div>
-      ))}
-      {(!recentNotifications || recentNotifications.length === 0) && (
-        <p class="text-text-muted text-center py-8">Nenhuma notificação enviada</p>
-      )}
+
+        <div class="mb-4">
+          <label class="block text-text-muted text-sm mb-2">Título *</label>
+          <input 
+            type="text" 
+            id="notification-title"
+            required
+            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+          />
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-text-muted text-sm mb-2">Mensagem *</label>
+          <textarea 
+            id="notification-body"
+            required
+            rows="4"
+            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+          ></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div>
+            <label class="block text-text-muted text-sm mb-2">Tipo</label>
+            <select 
+              id="notification-type"
+              class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+            >
+              <option value="info">Informação</option>
+              <option value="success">Sucesso</option>
+              <option value="warning">Aviso</option>
+              <option value="error">Erro</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-text-muted text-sm mb-2">Link (opcional)</label>
+            <input 
+              type="url" 
+              id="notification-link"
+              placeholder="https://..."
+              class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+            />
+          </div>
+        </div>
+
+        <div class="flex gap-4">
+          <button 
+            type="button"
+            onclick="closeSendModal()"
+            class="flex-1 bg-bg-dark hover:bg-bg-dark/80 text-text-light px-6 py-3 rounded-lg font-semibold transition-colors"
+          >
+            Cancelar
+          </button>
+          <button 
+            type="submit"
+            class="flex-1 bg-verde-principal hover:bg-verde-escuro text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+          >
+            Enviar
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 </AdminLayout>
 
 <script>
-  const form = document.getElementById('notifForm') as HTMLFormElement
-  const recipientSelect = document.getElementById('recipient') as HTMLSelectElement
-  const specificUserDiv = document.getElementById('specificUser') as HTMLDivElement
-  const errorMsg = document.getElementById('errorMsg') as HTMLDivElement
-  const successMsg = document.getElementById('successMsg') as HTMLDivElement
+  let currentPage = 1
+  let currentSearch = ''
+  let currentType = ''
 
-  recipientSelect.addEventListener('change', () => {
-    specificUserDiv.classList.toggle('hidden', recipientSelect.value !== 'specific')
-  })
+  async function loadNotifications() {
+    currentSearch = document.getElementById('search-input').value
+    currentType = document.getElementById('type-filter').value
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault()
-    errorMsg.classList.add('hidden')
-    successMsg.classList.add('hidden')
-
-    const data = {
-      recipient: recipientSelect.value,
-      user_email: recipientSelect.value === 'specific' ? (document.getElementById('user_email') as HTMLInputElement).value : null,
-      title: (document.getElementById('title') as HTMLInputElement).value,
-      body: (document.getElementById('body') as HTMLTextAreaElement).value,
-      link_url: (document.getElementById('link_url') as HTMLInputElement).value || null,
-    }
-
-    const res = await fetch('/admin/api/notifications', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+    const params = new URLSearchParams({
+      page: currentPage.toString(),
+      limit: '20',
+      search: currentSearch,
+      type: currentType,
     })
 
-    if (res.ok) {
-      successMsg.textContent = 'Notificação enviada com sucesso!'
-      successMsg.classList.remove('hidden')
-      form.reset()
-      setTimeout(() => successMsg.classList.add('hidden'), 3000)
+    try {
+      const response = await fetch(`/admin/api/notifications?${params}`)
+      const data = await response.json()
+
+      renderNotifications(data.notifications)
+      renderPagination(data)
+    } catch (error) {
+      console.error('Erro ao carregar notificações:', error)
+      document.getElementById('notifications-table').innerHTML = `
+        <tr>
+          <td colspan="6" class="px-6 py-8 text-center text-vermelho">
+            Erro ao carregar notificações
+          </td>
+        </tr>
+      `
+    }
+  }
+
+  function renderNotifications(notifications) {
+    const tbody = document.getElementById('notifications-table')
+    
+    if (notifications.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" class="px-6 py-8 text-center text-text-muted">
+            Nenhuma notificação encontrada
+          </td>
+        </tr>
+      `
+      return
+    }
+
+    tbody.innerHTML = notifications.map(notification => {
+      const typeLabel = {
+        info: 'Informação',
+        success: 'Sucesso',
+        warning: 'Aviso',
+        error: 'Erro'
+      }[notification.type]
+      const typeColor = {
+        info: 'text-text-light',
+        success: 'text-verde-claro',
+        warning: 'text-dourado',
+        error: 'text-vermelho'
+      }[notification.type]
+
+      return `
+        <tr class="border-t border-verde-principal/10 hover:bg-bg-dark/30">
+          <td class="px-6 py-4">
+            <div class="text-text-light">${notification.user_name || '—'}</div>
+            <div class="text-text-muted text-sm">${notification.user_email || '—'}</div>
+          </td>
+          <td class="px-6 py-4">
+            <div class="text-text-light font-semibold">${notification.title}</div>
+            <div class="text-text-muted text-sm line-clamp-2">${notification.body}</div>
+          </td>
+          <td class="px-6 py-4">
+            <span class="${typeColor} font-semibold">${typeLabel}</span>
+          </td>
+          <td class="px-6 py-4">
+            ${notification.read ? 
+              '<span class="text-verde-claro">✓ Sim</span>' : 
+              '<span class="text-text-muted">Não</span>'
+            }
+          </td>
+          <td class="px-6 py-4 text-text-muted text-sm">
+            ${new Date(notification.created_at).toLocaleString('pt-BR')}
+          </td>
+          <td class="px-6 py-4">
+            <button 
+              onclick="deleteNotification('${notification.id}')"
+              class="text-vermelho hover:text-vermelho/80 text-sm"
+            >
+              Remover
+            </button>
+          </td>
+        </tr>
+      `
+    }).join('')
+  }
+
+  function renderPagination(data) {
+    const { page, totalPages, total, notifications } = data
+    const start = (page - 1) * 20 + 1
+    const end = Math.min(page * 20, total)
+
+    document.getElementById('showing-start').textContent = start
+    document.getElementById('showing-end').textContent = end
+    document.getElementById('total-items').textContent = total
+
+    const controls = document.getElementById('pagination-controls')
+    let html = ''
+
+    if (page > 1) {
+      html += `<button onclick="goToPage(${page - 1})" class="px-4 py-2 bg-bg-dark hover:bg-bg-dark/80 text-text-light rounded-lg">Anterior</button>`
+    }
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === page) {
+        html += `<button class="px-4 py-2 bg-verde-principal text-white rounded-lg">${i}</button>`
+      } else if (i === 1 || i === totalPages || (i >= page - 2 && i <= page + 2)) {
+        html += `<button onclick="goToPage(${i})" class="px-4 py-2 bg-bg-dark hover:bg-bg-dark/80 text-text-light rounded-lg">${i}</button>`
+      } else if (i === page - 3 || i === page + 3) {
+        html += `<span class="px-2 text-text-muted">...</span>`
+      }
+    }
+
+    if (page < totalPages) {
+      html += `<button onclick="goToPage(${page + 1})" class="px-4 py-2 bg-bg-dark hover:bg-bg-dark/80 text-text-light rounded-lg">Próximo</button>`
+    }
+
+    controls.innerHTML = html
+  }
+
+  function goToPage(page) {
+    currentPage = page
+    loadNotifications()
+  }
+
+  async function openSendModal() {
+    try {
+      const response = await fetch('/admin/api/students?limit=100')
+      const data = await response.json()
+
+      const select = document.getElementById('notification-users')
+      select.innerHTML = ''
+      
+      data.students.forEach(student => {
+        select.innerHTML += `<option value="${student.id}">${student.full_name} (${student.email})</option>`
+      })
+
+      document.getElementById('notification-title').value = ''
+      document.getElementById('notification-body').value = ''
+      document.getElementById('notification-type').value = 'info'
+      document.getElementById('notification-link').value = ''
+      document.querySelector('input[name="recipient-type"][value="specific"]').checked = true
+      toggleRecipientType()
+
+      document.getElementById('send-modal').classList.remove('hidden')
+      document.getElementById('send-modal').classList.add('flex')
+    } catch (error) {
+      alert('Erro ao carregar lista de usuários')
+    }
+  }
+
+  function closeSendModal() {
+    document.getElementById('send-modal').classList.add('hidden')
+    document.getElementById('send-modal').classList.remove('flex')
+  }
+
+  function toggleRecipientType() {
+    const recipientType = document.querySelector('input[name="recipient-type"]:checked').value
+    const usersSelect = document.getElementById('notification-users')
+    
+    if (recipientType === 'all') {
+      usersSelect.classList.add('hidden')
+      usersSelect.required = false
     } else {
-      errorMsg.textContent = 'Erro: ' + await res.text()
-      errorMsg.classList.remove('hidden')
+      usersSelect.classList.remove('hidden')
+      usersSelect.required = true
+    }
+  }
+
+  async function deleteNotification(id) {
+    if (!confirm('Tem certeza que deseja remover esta notificação?')) return
+
+    try {
+      const response = await fetch(`/admin/api/notifications/${id}/delete`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        alert('Notificação removida com sucesso!')
+        loadNotifications()
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Erro ao remover notificação')
+      }
+    } catch (error) {
+      alert('Erro ao remover notificação')
+    }
+  }
+
+  document.getElementById('send-form').addEventListener('submit', async (e) => {
+    e.preventDefault()
+
+    const recipientType = document.querySelector('input[name="recipient-type"]:checked').value
+    const title = document.getElementById('notification-title').value
+    const body = document.getElementById('notification-body').value
+    const type = document.getElementById('notification-type').value
+    const link_url = document.getElementById('notification-link').value
+
+    try {
+      let url, data
+
+      if (recipientType === 'all') {
+        url = '/admin/api/notifications/broadcast'
+        data = { title, body, type, link_url }
+      } else {
+        const usersSelect = document.getElementById('notification-users')
+        const user_ids = Array.from(usersSelect.selectedOptions).map(opt => opt.value)
+        
+        if (user_ids.length === 0) {
+          alert('Selecione pelo menos um usuário')
+          return
+        }
+
+        url = '/admin/api/notifications'
+        data = { user_ids, title, body, type, link_url }
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        alert(result.message)
+        closeSendModal()
+        loadNotifications()
+      } else {
+        const errorData = await response.json()
+        alert(errorData.error || 'Erro ao enviar notificação')
+      }
+    } catch (error) {
+      alert('Erro ao enviar notificação')
     }
   })
+
+  loadNotifications()
 </script>
