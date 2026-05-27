@@ -1,46 +1,62 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro'
-import { supabaseAdmin } from '../../../lib/supabase-server'
+import { db } from '../../../lib/turso'
 
 const productId = Astro.params.id
-const { data: product } = await supabaseAdmin
-  .from('products')
-  .select('*, modules(id, title, sort_order, lessons(id, title, sort_order, type, duration_sec))')
-  .eq('id', productId)
-  .single()
 
+const productRow = await db.execute({
+  sql: 'SELECT * FROM products WHERE id = ?',
+  args: [productId],
+})
+const product = productRow.rows[0]
 if (!product) return Astro.redirect('/admin/products')
+
+const modulesRows = await db.execute({
+  sql: 'SELECT * FROM modules WHERE product_id = ? ORDER BY sort_order ASC',
+  args: [productId],
+})
+const modules = modulesRows.rows
+
+for (const mod of modules) {
+  const lessonsRows = await db.execute({
+    sql: 'SELECT * FROM lessons WHERE module_id = ? ORDER BY sort_order ASC',
+    args: [mod.id],
+  })
+  mod.lessons = lessonsRows.rows
+}
+
+product.modules = modules
 ---
 
 <AdminLayout title={`Editar: ${product.title}`}>
   <div class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-display font-bold text-dourado">Editar Produto</h1>
-    <a href="/admin/products" class="btn btn-secondary">Voltar</a>
+    <a href="/admin/products" class="bg-bg-dark hover:bg-white/10 text-text-light px-4 py-2 rounded-lg font-medium transition-colors">Voltar</a>
   </div>
 
   <form id="productForm" class="space-y-6">
-    <div class="card p-6">
+    <div class="bg-azul-profundo rounded-xl border border-white/10 p-6">
       <h2 class="font-bold text-dourado mb-4">Informações Básicas</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label class="block text-sm font-medium text-text-muted mb-2">Título</label>
-          <input type="text" id="title" class="input" value={product.title} required />
+          <input type="text" id="title" class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light placeholder-text-muted focus:outline-none focus:border-dourado transition-colors" value={product.title} required />
         </div>
         <div>
           <label class="block text-sm font-medium text-text-muted mb-2">Slug</label>
-          <input type="text" id="slug" class="input" value={product.slug} required />
+          <input type="text" id="slug" class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light placeholder-text-muted focus:outline-none focus:border-dourado transition-colors" value={product.slug} required />
         </div>
         <div class="md:col-span-2">
           <label class="block text-sm font-medium text-text-muted mb-2">Descrição</label>
-          <textarea id="description" class="input" rows="3">{product.description}</textarea>
+          <textarea id="description" class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light placeholder-text-muted focus:outline-none focus:border-dourado transition-colors" rows="3">{product.description}</textarea>
         </div>
         <div>
           <label class="block text-sm font-medium text-text-muted mb-2">Preço (centavos)</label>
-          <input type="number" id="price_cents" class="input" value={product.price_cents} required />
+          <input type="number" id="price_cents" class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light placeholder-text-muted focus:outline-none focus:border-dourado transition-colors" value={product.price_cents} required />
         </div>
         <div>
           <label class="block text-sm font-medium text-text-muted mb-2">Tipo</label>
-          <select id="type" class="input">
+          <select id="type" class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light placeholder-text-muted focus:outline-none focus:border-dourado transition-colors">
             <option value="workshop" selected={product.type === 'workshop'}>Workshop</option>
             <option value="course" selected={product.type === 'course'}>Curso</option>
             <option value="ebook" selected={product.type === 'ebook'}>Ebook</option>
@@ -48,7 +64,7 @@ if (!product) return Astro.redirect('/admin/products')
         </div>
         <div>
           <label class="block text-sm font-medium text-text-muted mb-2">Status</label>
-          <select id="status" class="input">
+          <select id="status" class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light placeholder-text-muted focus:outline-none focus:border-dourado transition-colors">
             <option value="draft" selected={product.status === 'draft'}>Rascunho</option>
             <option value="published" selected={product.status === 'published'}>Publicado</option>
             <option value="archived" selected={product.status === 'archived'}>Arquivado</option>
@@ -56,11 +72,11 @@ if (!product) return Astro.redirect('/admin/products')
         </div>
         <div>
           <label class="block text-sm font-medium text-text-muted mb-2">URL da Capa</label>
-          <input type="url" id="cover_url" class="input" value={product.cover_url || ''} />
+          <input type="url" id="cover_url" class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light placeholder-text-muted focus:outline-none focus:border-dourado transition-colors" value={product.cover_url || ''} />
         </div>
         <div>
           <label class="block text-sm font-medium text-text-muted mb-2">Comissão Afiliado (%)</label>
-          <input type="number" id="affiliate_commission_pct" class="input" value={product.affiliate_commission_pct} step="0.01" />
+          <input type="number" id="affiliate_commission_pct" class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light placeholder-text-muted focus:outline-none focus:border-dourado transition-colors" value={product.affiliate_commission_pct} step="0.01" />
         </div>
         <div class="flex items-center gap-2">
           <input type="checkbox" id="is_affiliable" checked={product.is_affiliable} />
@@ -69,16 +85,16 @@ if (!product) return Astro.redirect('/admin/products')
       </div>
     </div>
 
-    <div class="card p-6">
+    <div class="bg-azul-profundo rounded-xl border border-white/10 p-6">
       <div class="flex justify-between items-center mb-4">
         <h2 class="font-bold text-dourado">Módulos ({product.modules?.length || 0})</h2>
-        <button type="button" onclick="addModule()" class="btn btn-secondary text-sm">+ Adicionar Módulo</button>
+        <button type="button" onclick="addModule()" class="bg-bg-dark hover:bg-white/10 text-text-light px-4 py-2 rounded-lg font-medium transition-colors text-sm">+ Adicionar Módulo</button>
       </div>
       <div id="modulesList" class="space-y-4">
         {(product.modules || []).sort((a: any, b: any) => a.sort_order - b.sort_order).map((m: any, i: number) => (
           <div class="bg-white/5 p-4 rounded-lg" data-module-id={m.id}>
             <div class="flex justify-between items-center mb-3">
-              <input type="text" class="input max-w-md module-title" value={m.title} placeholder="Título do módulo" />
+              <input type="text" class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light placeholder-text-muted focus:outline-none focus:border-dourado transition-colors max-w-md" value={m.title} placeholder="Título do módulo" />
               <button type="button" onclick={`deleteModule('${m.id}')`} class="text-red-400 hover:text-red-300 text-sm">Remover</button>
             </div>
             <div class="ml-4 space-y-2">
@@ -101,8 +117,8 @@ if (!product) return Astro.redirect('/admin/products')
     <div id="successMsg" class="hidden p-3 rounded-lg text-sm bg-verde-claro/10 border border-verde-claro/30 text-verde-claro"></div>
 
     <div class="flex justify-end gap-4">
-      <a href="/admin/products" class="btn btn-secondary">Cancelar</a>
-      <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+      <a href="/admin/products" class="bg-bg-dark hover:bg-white/10 text-text-light px-4 py-2 rounded-lg font-medium transition-colors">Cancelar</a>
+      <button type="submit" class="bg-verde-principal hover:bg-verde-claro text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 hover:scale-[1.02]">Salvar Alterações</button>
     </div>
   </form>
 </AdminLayout>

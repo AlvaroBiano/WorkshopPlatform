@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { supabaseAdmin } from '../../../../../lib/supabase-server'
+import { db } from '../../../../../lib/turso'
 import { getSessionFromCookies, isAdmin } from '../../../../../lib/auth'
 
 export const POST: APIRoute = async ({ request, params, cookies }) => {
@@ -15,32 +15,20 @@ export const POST: APIRoute = async ({ request, params, cookies }) => {
     return new Response('title is required', { status: 400 })
   }
 
-  const { count } = await supabaseAdmin
-    .from('lessons')
-    .select('*', { count: 'exact', head: true })
-    .eq('module_id', moduleId)
+  const countResult = await db.execute({
+    sql: 'SELECT COUNT(*) as count FROM lessons WHERE module_id = ?',
+    args: [moduleId],
+  })
+  const count = Number(countResult.rows[0]?.count || 0)
 
-  const { data: lesson, error } = await supabaseAdmin
-    .from('lessons')
-    .insert({
-      module_id: moduleId,
-      title: data.title,
-      type: data.type || 'vimeo',
-      duration_sec: data.duration_sec || 0,
-      sort_order: (count || 0) + 1,
-      vimeo_id: data.vimeo_id || null,
-      youtube_url: data.youtube_url || null,
-      file_url: data.file_url || null,
-      description: data.description || null,
-    })
-    .select()
-    .single()
+  const id = crypto.randomUUID()
+  await db.execute({
+    sql: `INSERT INTO lessons (id, module_id, title, type, duration_sec, sort_order, description, vimeo_id, youtube_url, file_url)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [id, moduleId, data.title, data.type || 'vimeo', data.duration_sec || 0, count + 1, data.description || null, data.vimeo_id || null, data.youtube_url || null, data.file_url || null],
+  })
 
-  if (error) {
-    return new Response(error.message, { status: 500 })
-  }
-
-  return new Response(JSON.stringify({ success: true, id: lesson.id }), {
+  return new Response(JSON.stringify({ success: true, id }), {
     headers: { 'Content-Type': 'application/json' },
   })
 }

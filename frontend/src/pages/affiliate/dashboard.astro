@@ -1,44 +1,43 @@
 ---
 import StudentLayout from '../../layouts/StudentLayout.astro'
-import { supabaseAdmin } from '../../lib/supabase-server'
+import { db } from '../../lib/turso'
 
 const user = Astro.locals.user
 if (!user) return Astro.redirect('/login')
 
-const { data: affiliate } = await supabaseAdmin
-  .from('affiliates')
-  .select('*')
-  .eq('user_id', user.id)
-  .single()
-
+const affiliateRows = await db.execute({
+  sql: 'SELECT * FROM affiliates WHERE user_id = ?',
+  args: [user.id],
+})
+const affiliate = affiliateRows.rows[0]
 if (!affiliate) return Astro.redirect('/student')
 
 const siteUrl = import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321'
 const referralLink = `${siteUrl}/?ref=${affiliate.code}`
 
-const { count: totalClicks } = await supabaseAdmin
-  .from('affiliate_clicks')
-  .select('*', { count: 'exact', head: true })
-  .eq('affiliate_id', affiliate.id)
+const totalClicksRows = await db.execute({
+  sql: 'SELECT COUNT(*) as count FROM affiliate_clicks WHERE affiliate_id = ?',
+  args: [affiliate.id],
+})
+const totalClicks = Number(totalClicksRows.rows[0]?.count || 0)
 
-const { count: conversions } = await supabaseAdmin
-  .from('orders')
-  .select('*', { count: 'exact', head: true })
-  .eq('affiliate_id', user.id)
-  .eq('status', 'approved')
+const conversionsRows = await db.execute({
+  sql: 'SELECT COUNT(*) as count FROM orders WHERE affiliate_id = ? AND status = ?',
+  args: [user.id, 'approved'],
+})
+const conversions = Number(conversionsRows.rows[0]?.count || 0)
 
-const { data: recentClicks } = await supabaseAdmin
-  .from('affiliate_clicks')
-  .select('*')
-  .eq('affiliate_id', affiliate.id)
-  .order('clicked_at', { ascending: false })
-  .limit(20)
+const recentClicksRows = await db.execute({
+  sql: 'SELECT * FROM affiliate_clicks WHERE affiliate_id = ? ORDER BY clicked_at DESC LIMIT 20',
+  args: [affiliate.id],
+})
+const recentClicks = recentClicksRows.rows
 
-const { data: withdrawals } = await supabaseAdmin
-  .from('affiliate_withdrawals')
-  .select('*')
-  .eq('affiliate_id', affiliate.id)
-  .order('requested_at', { ascending: false })
+const withdrawalsRows = await db.execute({
+  sql: 'SELECT * FROM affiliate_withdrawals WHERE affiliate_id = ? ORDER BY requested_at DESC',
+  args: [affiliate.id],
+})
+const withdrawals = withdrawalsRows.rows
 
 const conversionRate = totalClicks ? ((conversions || 0) / totalClicks * 100).toFixed(2) : '0'
 ---
@@ -47,11 +46,11 @@ const conversionRate = totalClicks ? ((conversions || 0) / totalClicks * 100).to
   <h1 class="text-2xl font-display font-bold text-dourado mb-2">Painel do Afiliado</h1>
   <p class="text-text-muted mb-8">Bem-vindo, {user.full_name}!</p>
 
-  <div class="card p-6 mb-8 bg-gradient-to-br from-dourado/10 to-transparent border-dourado/30">
+  <div class="bg-azul-profundo rounded-xl border border-white/10 p-6 mb-8 bg-gradient-to-br from-dourado/10 to-transparent border-dourado/30">
     <h2 class="font-bold mb-3 text-dourado">Seu Link de Afiliado</h2>
     <div class="flex gap-2">
-      <input type="text" readonly value={referralLink} id="refLink" class="input flex-1 font-mono text-sm" />
-      <button onclick="copyLink()" class="btn btn-primary">Copiar</button>
+      <input type="text" readonly value={referralLink} id="refLink" class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light placeholder-text-muted focus:outline-none focus:border-dourado transition-colors flex-1 font-mono text-sm" />
+      <button onclick="copyLink()" class="bg-verde-principal hover:bg-verde-claro text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 hover:scale-[1.02]">Copiar</button>
     </div>
     <p class="text-xs text-text-muted mt-2">
       Código: <strong class="text-dourado">{affiliate.code}</strong> · Comissão: <strong class="text-dourado">{affiliate.commission_pct}%</strong>
@@ -59,28 +58,28 @@ const conversionRate = totalClicks ? ((conversions || 0) / totalClicks * 100).to
   </div>
 
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-    <div class="card p-5">
+    <div class="bg-azul-profundo rounded-xl border border-white/10 p-5">
       <div class="flex items-center justify-between mb-2">
         <span class="text-2xl">👆</span>
         <span class="text-xs uppercase tracking-wider text-text-muted">Cliques</span>
       </div>
       <p class="text-3xl font-display font-bold text-azul-accent">{totalClicks || 0}</p>
     </div>
-    <div class="card p-5">
+    <div class="bg-azul-profundo rounded-xl border border-white/10 p-5">
       <div class="flex items-center justify-between mb-2">
         <span class="text-2xl">🎯</span>
         <span class="text-xs uppercase tracking-wider text-text-muted">Conversões</span>
       </div>
       <p class="text-3xl font-display font-bold text-verde-claro">{conversions || 0}</p>
     </div>
-    <div class="card p-5">
+    <div class="bg-azul-profundo rounded-xl border border-white/10 p-5">
       <div class="flex items-center justify-between mb-2">
         <span class="text-2xl">📊</span>
         <span class="text-xs uppercase tracking-wider text-text-muted">Taxa Conv.</span>
       </div>
       <p class="text-3xl font-display font-bold text-dourado">{conversionRate}%</p>
     </div>
-    <div class="card p-5">
+    <div class="bg-azul-profundo rounded-xl border border-white/10 p-5">
       <div class="flex items-center justify-between mb-2">
         <span class="text-2xl">💰</span>
         <span class="text-xs uppercase tracking-wider text-text-muted">Saldo Disp.</span>
@@ -90,7 +89,7 @@ const conversionRate = totalClicks ? ((conversions || 0) / totalClicks * 100).to
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-    <div class="card p-6">
+    <div class="bg-azul-profundo rounded-xl border border-white/10 p-6">
       <h2 class="font-bold mb-4 text-dourado">Meus Ganhos</h2>
       <div class="space-y-3">
         <div class="flex justify-between">
@@ -107,13 +106,13 @@ const conversionRate = totalClicks ? ((conversions || 0) / totalClicks * 100).to
         </div>
       </div>
       {(affiliate.balance_cents || 0) >= 10000 && (
-        <button onclick="requestWithdraw()" class="btn btn-primary w-full mt-4">
+        <button onclick="requestWithdraw()" class="bg-verde-principal hover:bg-verde-claro text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 hover:scale-[1.02] w-full mt-4">
           Solicitar Saque
         </button>
       )}
     </div>
 
-    <div class="card p-6">
+    <div class="bg-azul-profundo rounded-xl border border-white/10 p-6">
       <h2 class="font-bold mb-4 text-dourado">Dados de Pagamento</h2>
       <div class="space-y-3 text-sm">
         <div>
@@ -124,7 +123,7 @@ const conversionRate = totalClicks ? ((conversions || 0) / totalClicks * 100).to
     </div>
   </div>
 
-  <div class="card p-6 mb-8">
+  <div class="bg-azul-profundo rounded-xl border border-white/10 p-6 mb-8">
     <h2 class="font-bold mb-4 text-dourado">Cliques Recentes</h2>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
@@ -154,7 +153,7 @@ const conversionRate = totalClicks ? ((conversions || 0) / totalClicks * 100).to
   </div>
 
   {(withdrawals || []).length > 0 && (
-    <div class="card p-6">
+    <div class="bg-azul-profundo rounded-xl border border-white/10 p-6">
       <h2 class="font-bold mb-4 text-dourado">Histórico de Saques</h2>
       <div class="space-y-2">
         {withdrawals.map((w: any) => (
