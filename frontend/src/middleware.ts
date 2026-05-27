@@ -1,7 +1,7 @@
 import type { APIContext } from 'astro'
 import { verifyToken, getUserProfile, isAdmin } from './lib/auth'
 
-const PUBLIC_ROUTES = ['/', '/login', '/cadastro', '/recuperar-senha', '/first-access']
+const PUBLIC_ROUTES = ['/', '/login', '/cadastro', '/recuperar-senha', '/first-access', '/logout', '/termos', '/privacidade', '/suporte']
 const ADMIN_ROUTES = ['/admin']
 const STUDENT_ROUTES = ['/student']
 const AFFILIATE_ROUTES = ['/affiliate']

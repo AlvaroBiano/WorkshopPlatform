@@ -79,9 +79,43 @@ CREATE TABLE IF NOT EXISTS progress (
   FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
 );
 
+-- Settings table
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  description TEXT,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Audit logs table
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id TEXT PRIMARY KEY,
+  user_id TEXT,
+  action TEXT NOT NULL,
+  entity_type TEXT,
+  entity_id TEXT,
+  details TEXT,
+  ip_address TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_modules_product ON modules(product_id);
 CREATE INDEX IF NOT EXISTS idx_lessons_module ON lessons(module_id);
 CREATE INDEX IF NOT EXISTS idx_product_access_user ON product_access(user_id);
 CREATE INDEX IF NOT EXISTS idx_progress_user ON progress(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at);
+
+-- Insert default settings
+INSERT OR IGNORE INTO settings (key, value, description) VALUES
+('site_name', 'WORKSHOP', 'Nome do site'),
+('site_description', 'Plataforma de Workshops Online', 'Descrição do site'),
+('support_email', '', 'Email de suporte'),
+('support_whatsapp', '', 'WhatsApp de suporte'),
+('max_devices_per_user', '2', 'Máximo de dispositivos por usuário'),
+('registration_enabled', 'true', 'Cadastro aberto'),
+('maintenance_mode', 'false', 'Modo manutenção'),
+('default_commission_pct', '40', 'Comissão padrão de afiliados');

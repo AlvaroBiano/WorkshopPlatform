@@ -3,6 +3,45 @@ import { db } from '../../../../../lib/turso'
 import { getSessionFromCookies, isAdmin } from '../../../../../lib/auth'
 import bcrypt from 'bcryptjs'
 
+export const GET: APIRoute = async ({ cookies, params }) => {
+  const session = await getSessionFromCookies(cookies)
+  if (!session?.profile || !isAdmin(session.profile)) {
+    return new Response('Forbidden', { status: 403 })
+  }
+
+  const { id } = params
+  if (!id) {
+    return new Response(JSON.stringify({ error: 'ID é obrigatório' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  try {
+    const result = await db.execute({
+      sql: 'SELECT * FROM users WHERE id = ?',
+      args: [id],
+    })
+
+    if (result.rows.length === 0) {
+      return new Response(JSON.stringify({ error: 'Aluno não encontrado' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    return new Response(JSON.stringify({ student: result.rows[0] }), {
+      headers: { 'Content-Type': 'application/json' },
+    })
+  } catch (error) {
+    console.error('Error fetching student:', error)
+    return new Response(JSON.stringify({ error: 'Erro ao buscar aluno' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+}
+
 export const PUT: APIRoute = async ({ request, cookies, params }) => {
   const session = await getSessionFromCookies(cookies)
   if (!session?.profile || !isAdmin(session.profile)) {

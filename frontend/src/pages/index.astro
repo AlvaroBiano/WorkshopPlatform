@@ -3,29 +3,36 @@ import Layout from '../layouts/Layout.astro'
 import Icon from '../components/ui/Icon.astro'
 import Card from '../components/ui/Card.astro'
 import Button from '../components/ui/Button.astro'
-import { supabaseAdmin } from '../lib/supabase-server'
+import { db } from '../lib/turso'
 
 const refCode = Astro.url.searchParams.get('ref')
 
 if (refCode) {
-  const { data: affiliate } = await supabaseAdmin
-    .from('affiliates')
-    .select('id')
-    .eq('code', refCode.toUpperCase())
-    .eq('status', 'active')
-    .single()
-
-  if (affiliate) {
-    const visitorFp = 'fp_' + Date.now() + '_' + Math.random().toString(36).slice(2)
-
-    await supabaseAdmin.from('affiliate_clicks').insert({
-      affiliate_id: affiliate.id,
-      visitor_fp: visitorFp,
-      ip: Astro.request.headers.get('x-forwarded-for')?.split(',')[0] || null,
-      user_agent: Astro.request.headers.get('user-agent') || null,
-      referrer: Astro.request.headers.get('referer') || null,
-      landing_url: Astro.url.pathname + Astro.url.search,
+  try {
+    const affiliate = await db.execute({
+      sql: 'SELECT id FROM affiliates WHERE code = ? AND status = ?',
+      args: [refCode.toUpperCase(), 'active'],
     })
+
+    if (affiliate.rows.length > 0) {
+      const visitorFp = 'fp_' + Date.now() + '_' + Math.random().toString(36).slice(2)
+
+      await db.execute({
+        sql: `INSERT INTO affiliate_clicks (id, affiliate_id, visitor_fp, ip_address, user_agent, referrer, landing_url, clicked_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+        args: [
+          crypto.randomUUID(),
+          affiliate.rows[0].id,
+          visitorFp,
+          Astro.request.headers.get('x-forwarded-for')?.split(',')[0] || null,
+          Astro.request.headers.get('user-agent') || null,
+          Astro.request.headers.get('referer') || null,
+          Astro.url.pathname + Astro.url.search,
+        ],
+      })
+    }
+  } catch (error) {
+    console.error('Erro ao registrar clique de afiliado:', error)
   }
 }
 ---

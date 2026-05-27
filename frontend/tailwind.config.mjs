@@ -7,15 +7,18 @@ export default {
         verde: {
           principal: '#0F5132',
           claro: '#198754',
+          escuro: '#0A3622',
         },
         azul: {
           profundo: '#0A2540',
           accent: '#1E88E5',
         },
         dourado: {
+          DEFAULT: '#D4AF37',
           principal: '#D4AF37',
           claro: '#F1C40F',
         },
+        vermelho: '#DC3545',
         bg: {
           dark: '#0A0E1A',
           card: '#141B2D',
