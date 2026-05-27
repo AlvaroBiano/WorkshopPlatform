@@ -1,0 +1,83 @@
+---
+interface Column {
+  key: string
+  label: string
+  sortable?: boolean
+  class?: string
+  align?: 'left' | 'center' | 'right'
+}
+
+interface Props {
+  columns: Column[]
+  data: Record<string, any>[]
+  emptyMessage?: string
+  class?: string
+  stickyHeader?: boolean
+}
+
+const {
+  columns,
+  data = [],
+  emptyMessage = 'Nenhum dado encontrado',
+  class: className = '',
+  stickyHeader = true,
+} = Astro.props
+
+const alignClasses = {
+  left: 'text-left',
+  center: 'text-center',
+  right: 'text-right',
+}
+---
+
+<div class:list={['overflow-x-auto rounded-lg border border-white/5', className]}>
+  <table class="w-full text-sm">
+    <thead class="bg-bg-dark/50">
+      <tr>
+        {columns.map(col => (
+          <th
+            class:list={[
+              'px-6 py-4 font-semibold text-text-muted uppercase tracking-wider text-xs',
+              alignClasses[col.align || 'left'],
+              col.sortable ? 'cursor-pointer hover:text-dourado transition-colors' : '',
+              col.class,
+            ]}
+            data-sortable={col.sortable ? col.key : undefined}
+          >
+            <div class:list={['flex items-center gap-2', alignClasses[col.align || 'left'] === 'left' ? 'justify-start' : alignClasses[col.align || 'left'] === 'right' ? 'justify-end' : 'justify-center']}>
+              {col.label}
+              {col.sortable && (
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-50">
+                  <path d="m6 9 6 6 6-6"/>
+                </svg>
+              )}
+            </div>
+          </th>
+        ))}
+      </tr>
+    </thead>
+    <tbody>
+      {data.length === 0 ? (
+        <tr>
+          <td colspan={columns.length} class="px-6 py-12 text-center text-text-muted">
+            {emptyMessage}
+          </td>
+        </tr>
+      ) : (
+        data.map((row, rowIndex) => (
+          <tr class:list={['border-t border-white/5 hover:bg-white/5 transition-colors', rowIndex % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.02]']}>
+            {columns.map(col => (
+              <td class:list={['px-6 py-4 text-text-light', alignClasses[col.align || 'left'], col.class]}>
+                {col.key.includes('.') ? (
+                  col.key.split('.').reduce((obj, key) => obj?.[key], row)
+                ) : (
+                  row[col.key]
+                )}
+              </td>
+            ))}
+          </tr>
+        ))
+      )}
+    </tbody>
+  </table>
+</div>

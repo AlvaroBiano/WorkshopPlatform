@@ -1,5 +1,8 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro'
+import Icon from '../../components/ui/Icon.astro'
+import Card from '../../components/ui/Card.astro'
+import Badge from '../../components/ui/Badge.astro'
 import { db } from '../../lib/turso'
 
 const user = Astro.locals.user
@@ -21,40 +24,50 @@ const pendingCount = 0
   </h1>
 
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-    <div class="card p-5">
+    <Card class="p-5">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-2xl">🎓</span>
+        <div class="w-10 h-10 rounded-lg bg-dourado/10 flex items-center justify-center">
+          <Icon name="users" size={20} class="text-dourado" />
+        </div>
         <span class="text-xs uppercase tracking-wider text-text-muted">Alunos</span>
       </div>
       <p class="text-3xl font-display font-bold text-dourado">{totalStudents || 0}</p>
-    </div>
-    <div class="card p-5">
+    </Card>
+    <Card class="p-5">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-2xl">💰</span>
+        <div class="w-10 h-10 rounded-lg bg-verde-principal/10 flex items-center justify-center">
+          <Icon name="banknote" size={20} class="text-verde-claro" />
+        </div>
         <span class="text-xs uppercase tracking-wider text-text-muted">Receita Mês</span>
       </div>
       <p class="text-3xl font-display font-bold text-verde-claro">R$ {(monthRevenue / 100).toFixed(0)}</p>
-    </div>
-    <div class="card p-5">
+    </Card>
+    <Card class="p-5">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-2xl">⏳</span>
+        <div class="w-10 h-10 rounded-lg bg-dourado/10 flex items-center justify-center">
+          <Icon name="clock" size={20} class="text-dourado" />
+        </div>
         <span class="text-xs uppercase tracking-wider text-text-muted">Pendentes</span>
       </div>
       <p class="text-3xl font-display font-bold text-dourado">{pendingCount || 0}</p>
-    </div>
-    <div class="card p-5">
+    </Card>
+    <Card class="p-5">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-2xl">📦</span>
+        <div class="w-10 h-10 rounded-lg bg-azul-accent/10 flex items-center justify-center">
+          <Icon name="package" size={20} class="text-azul-accent" />
+        </div>
         <span class="text-xs uppercase tracking-wider text-text-muted">Produtos</span>
       </div>
       <p class="text-3xl font-display font-bold text-text-light">1</p>
-    </div>
+    </Card>
   </div>
 
   <section class="card p-6 mb-8">
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-xl font-bold text-dourado">Aprovações Pendentes</h2>
-      <a href="/admin/students" class="text-dourado text-sm hover:underline">Ver todas →</a>
+      <a href="/admin/students" class="text-dourado text-sm hover:underline flex items-center gap-1">
+        Ver todas <Icon name="arrow-right" size={14} />
+      </a>
     </div>
     <p class="text-text-muted text-center py-8">Nenhuma aprovação pendente</p>
   </section>
@@ -74,19 +87,18 @@ const pendingCount = 0
         </thead>
         <tbody>
           {(recentOrders || []).map((o: any) => (
-            <tr class="border-b border-white/5">
+            <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
               <td class="py-3">{o.user_name || '—'}</td>
               <td class="py-3">{o.product_name || '—'}</td>
               <td class="py-3 text-dourado font-semibold">R$ {((o.amount_cents || 0) / 100).toFixed(2)}</td>
               <td class="py-3">
-                <span class:list={[
-                  'px-2 py-1 rounded text-xs',
-                  o.status === 'approved' ? 'bg-verde-claro/20 text-verde-claro' :
-                  o.status === 'pending' ? 'bg-dourado/20 text-dourado' :
-                  'bg-red-500/20 text-red-400'
-                ]}>
-                  {o.status === 'approved' ? 'Aprovado' : o.status === 'pending' ? 'Pendente' : o.status}
-                </span>
+                {o.status === 'approved' ? (
+                  <Badge variant="success">Aprovado</Badge>
+                ) : o.status === 'pending' ? (
+                  <Badge variant="warning">Pendente</Badge>
+                ) : (
+                  <Badge variant="error">{o.status}</Badge>
+                )}
               </td>
               <td class="py-3 text-text-muted">{new Date(o.created_at).toLocaleDateString('pt-BR')}</td>
             </tr>

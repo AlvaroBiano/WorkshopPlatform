@@ -1,0 +1,46 @@
+---
+interface Props {
+  variant?: 'default' | 'stat' | 'interactive'
+  class?: string
+  padding?: 'none' | 'sm' | 'md' | 'lg'
+  hover?: boolean
+}
+
+const {
+  variant = 'default',
+  class: className = '',
+  padding = 'md',
+  hover = false,
+} = Astro.props
+
+const baseClasses = 'bg-bg-card rounded-xl border border-white/5 transition-all duration-300'
+
+const paddingClasses = {
+  none: '',
+  sm: 'p-4',
+  md: 'p-6',
+  lg: 'p-8',
+}
+
+const variantClasses = {
+  default: '',
+  stat: '',
+  interactive: 'cursor-pointer',
+}
+
+const hoverClasses = hover || variant === 'interactive' 
+  ? 'hover:border-dourado/20 hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5' 
+  : ''
+
+const classes = [
+  baseClasses,
+  paddingClasses[padding],
+  variantClasses[variant],
+  hoverClasses,
+  className,
+].filter(Boolean).join(' ')
+---
+
+<div class={classes}>
+  <slot />
+</div>

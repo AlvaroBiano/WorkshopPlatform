@@ -1,5 +1,9 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro'
+import Card from '../../components/ui/Card.astro'
+import Badge from '../../components/ui/Badge.astro'
+import Icon from '../../components/ui/Icon.astro'
+import Button from '../../components/ui/Button.astro'
 import { getSessionFromCookies, isAdmin } from '../../lib/auth'
 
 const session = await getSessionFromCookies(Astro.cookies)
@@ -9,162 +13,158 @@ if (!session?.profile || !isAdmin(session.profile)) {
 ---
 
 <AdminLayout title="Gestão de Produtos">
-  <div class="container mx-auto px-4 py-8">
+  <div class="mb-8">
     <div class="flex justify-between items-center mb-8">
-      <h1 class="text-3xl font-bold text-dourado">Gestão de Produtos</h1>
-      <button 
-        onclick="openCreateModal()"
-        class="bg-verde-principal hover:bg-verde-escuro text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-      >
-        + Novo Produto
-      </button>
+      <h1 class="text-3xl font-display font-bold text-dourado">Gestão de Produtos</h1>
+      <Button onclick="openCreateModal()" icon="plus" variant="primary">
+        Novo Produto
+      </Button>
     </div>
+  </div>
 
-    <!-- Lista de Produtos -->
-    <div id="products-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div class="col-span-full text-center py-12">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-dourado mx-auto"></div>
-        <p class="mt-4 text-text-muted">Carregando produtos...</p>
+  <div id="products-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="col-span-full text-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-2 border-dourado/20 border-t-dourado mx-auto mb-4"></div>
+      <p class="text-text-muted">Carregando produtos...</p>
+    </div>
+  </div>
+
+  <div id="product-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeProductModal()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4 overflow-y-auto">
+      <div class="bg-azul-profundo rounded-xl border border-white/10 shadow-2xl w-full max-w-2xl my-8 transform transition-all">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-white/5">
+          <h2 id="modal-title" class="text-xl font-display font-bold text-dourado">Novo Produto</h2>
+          <button onclick="closeProductModal()" class="p-2 text-text-muted hover:text-text-light hover:bg-white/5 rounded-lg transition-colors">
+            <Icon name="x" size={20} />
+          </button>
+        </div>
+
+        <form id="product-form" class="p-6">
+          <input type="hidden" id="product-id" />
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="block text-sm font-medium text-text-muted mb-2">Título *</label>
+              <input 
+                type="text" 
+                id="product-title"
+                required
+                class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light focus:outline-none focus:border-dourado transition-colors"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-text-muted mb-2">Tipo</label>
+              <select 
+                id="product-type"
+                class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light focus:outline-none focus:border-dourado transition-colors"
+              >
+                <option value="course">Curso</option>
+                <option value="workshop">Workshop</option>
+                <option value="ebook">E-book</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-text-muted mb-2">Descrição</label>
+            <textarea 
+              id="product-description"
+              rows="3"
+              class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light focus:outline-none focus:border-dourado transition-colors"
+            ></textarea>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="block text-sm font-medium text-text-muted mb-2">Preço (R$)</label>
+              <input 
+                type="number" 
+                id="product-price"
+                step="0.01"
+                min="0"
+                class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light focus:outline-none focus:border-dourado transition-colors"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-text-muted mb-2">URL da Capa</label>
+              <input 
+                type="url" 
+                id="product-cover"
+                placeholder="https://..."
+                class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light placeholder-text-muted focus:outline-none focus:border-dourado transition-colors"
+              />
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <label class="flex items-center gap-2 cursor-pointer mb-2">
+              <input 
+                type="checkbox" 
+                id="product-affiliable"
+                class="w-4 h-4 accent-verde-principal"
+              />
+              <span class="text-text-light text-sm">Habilitar programa de afiliados</span>
+            </label>
+            <div id="commission-field" class="hidden">
+              <label class="block text-sm font-medium text-text-muted mb-2">Comissão (%)</label>
+              <input 
+                type="number" 
+                id="product-commission"
+                min="0"
+                max="100"
+                value="40"
+                class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light focus:outline-none focus:border-dourado transition-colors"
+              />
+            </div>
+          </div>
+
+          <div class="flex gap-4">
+            <button type="button" onclick="closeProductModal()" class="flex-1 bg-bg-dark hover:bg-white/5 text-text-light px-4 py-3 rounded-lg font-semibold transition-colors">
+              Cancelar
+            </button>
+            <button type="submit" class="flex-1 bg-verde-principal hover:bg-verde-claro text-white px-4 py-3 rounded-lg font-semibold transition-colors">
+              Salvar
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
 
-  <!-- Modal de Criar/Editar Produto -->
-  <div id="product-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 overflow-y-auto">
-    <div class="bg-azul-profundo rounded-lg p-8 max-w-2xl w-full mx-4 my-8">
-      <h2 id="modal-title" class="text-2xl font-bold text-dourado mb-6">Novo Produto</h2>
-      <form id="product-form">
-        <input type="hidden" id="product-id" />
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label class="block text-text-muted text-sm mb-2">Título *</label>
-            <input 
-              type="text" 
-              id="product-title"
-              required
-              class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
-            />
-          </div>
-
-          <div>
-            <label class="block text-text-muted text-sm mb-2">Tipo</label>
-            <select 
-              id="product-type"
-              class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
-            >
-              <option value="course">Curso</option>
-              <option value="workshop">Workshop</option>
-              <option value="ebook">E-book</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="mb-4">
-          <label class="block text-text-muted text-sm mb-2">Descrição</label>
-          <textarea 
-            id="product-description"
-            rows="3"
-            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
-          ></textarea>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label class="block text-text-muted text-sm mb-2">Preço (R$)</label>
-            <input 
-              type="number" 
-              id="product-price"
-              step="0.01"
-              min="0"
-              class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
-            />
-          </div>
-
-          <div>
-            <label class="block text-text-muted text-sm mb-2">URL da Capa</label>
-            <input 
-              type="url" 
-              id="product-cover"
-              placeholder="https://..."
-              class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
-            />
-          </div>
-        </div>
-
-        <div class="mb-6">
-          <label class="flex items-center gap-2 cursor-pointer mb-2">
-            <input 
-              type="checkbox" 
-              id="product-affiliable"
-              class="w-4 h-4 accent-verde-principal"
-            />
-            <span class="text-text-light text-sm">Habilitar programa de afiliados</span>
-          </label>
-          <div id="commission-field" class="hidden">
-            <label class="block text-text-muted text-sm mb-2">Comissão (%)</label>
-            <input 
-              type="number" 
-              id="product-commission"
-              min="0"
-              max="100"
-              value="40"
-              class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
-            />
-          </div>
-        </div>
-
-        <div class="flex gap-4">
-          <button 
-            type="button"
-            onclick="closeProductModal()"
-            class="flex-1 bg-bg-dark hover:bg-bg-dark/80 text-text-light px-6 py-3 rounded-lg font-semibold transition-colors"
-          >
-            Cancelar
-          </button>
-          <button 
-            type="submit"
-            class="flex-1 bg-verde-principal hover:bg-verde-escuro text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-          >
-            Salvar
+  <div id="content-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeContentModal()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4 overflow-y-auto">
+      <div class="bg-azul-profundo rounded-xl border border-white/10 shadow-2xl w-full max-w-4xl my-8 transform transition-all">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-white/5">
+          <h2 id="content-modal-title" class="text-xl font-display font-bold text-dourado">Editor de Conteúdo</h2>
+          <button onclick="closeContentModal()" class="p-2 text-text-muted hover:text-text-light hover:bg-white/5 rounded-lg transition-colors">
+            <Icon name="x" size={20} />
           </button>
         </div>
-      </form>
-    </div>
-  </div>
 
-  <!-- Modal de Editor de Conteúdo -->
-  <div id="content-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 overflow-y-auto">
-    <div class="bg-azul-profundo rounded-lg p-8 max-w-4xl w-full mx-4 my-8">
-      <div class="flex justify-between items-center mb-6">
-        <h2 id="content-modal-title" class="text-2xl font-bold text-dourado">Editor de Conteúdo</h2>
-        <button onclick="closeContentModal()" class="text-text-muted hover:text-text-light text-2xl">&times;</button>
-      </div>
+        <div id="modules-container" class="p-6 space-y-4">
+        </div>
 
-      <div id="modules-container" class="space-y-4 mb-6">
-        <!-- Módulos serão inseridos via JS -->
-      </div>
+        <div class="px-6 pb-6">
+          <button 
+            onclick="addModule()"
+            class="w-full bg-bg-dark hover:bg-white/5 text-dourado px-6 py-3 rounded-lg font-semibold transition-colors border-2 border-dashed border-dourado/30 mb-6"
+          >
+            + Adicionar Módulo
+          </button>
 
-      <button 
-        onclick="addModule()"
-        class="w-full bg-bg-dark hover:bg-bg-dark/80 text-dourado px-6 py-3 rounded-lg font-semibold transition-colors border-2 border-dashed border-dourado/30"
-      >
-        + Adicionar Módulo
-      </button>
-
-      <div class="flex gap-4 mt-6">
-        <button 
-          onclick="closeContentModal()"
-          class="flex-1 bg-bg-dark hover:bg-bg-dark/80 text-text-light px-6 py-3 rounded-lg font-semibold transition-colors"
-        >
-          Fechar
-        </button>
-        <button 
-          onclick="saveContent()"
-          class="flex-1 bg-verde-principal hover:bg-verde-escuro text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-        >
-          Salvar Alterações
-        </button>
+          <div class="flex gap-4">
+            <button onclick="closeContentModal()" class="flex-1 bg-bg-dark hover:bg-white/5 text-text-light px-4 py-3 rounded-lg font-semibold transition-colors">
+              Fechar
+            </button>
+            <button onclick="saveContent()" class="flex-1 bg-verde-principal hover:bg-verde-claro text-white px-4 py-3 rounded-lg font-semibold transition-colors">
+              Salvar Alterações
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -181,10 +181,10 @@ if (!session?.profile || !isAdmin(session.profile)) {
       products = data.products
       renderProducts()
     } catch (error) {
-      console.error('Erro ao carregar produtos:', error)
       document.getElementById('products-grid').innerHTML = `
-        <div class="col-span-full text-center py-12 text-vermelho">
-          Erro ao carregar produtos
+        <div class="col-span-full text-center py-12">
+          <Icon name="alert-circle" size={48} class="text-vermelho mx-auto mb-4" />
+          <p class="text-vermelho font-medium">Erro ao carregar produtos</p>
         </div>
       `
     }
@@ -193,90 +193,76 @@ if (!session?.profile || !isAdmin(session.profile)) {
   function renderProducts() {
     const grid = document.getElementById('products-grid')
     
-    if (products.length === 0) {
+    if (!products || products.length === 0) {
       grid.innerHTML = `
-        <div class="col-span-full text-center py-12 text-text-muted">
-          Nenhum produto cadastrado
+        <div class="col-span-full text-center py-12">
+          <Icon name="package" size={48} class="text-text-muted/30 mx-auto mb-4" />
+          <p class="text-text-muted">Nenhum produto cadastrado</p>
         </div>
       `
       return
     }
 
+    const statusMap = {
+      draft: { label: 'Rascunho', variant: 'neutral' },
+      published: { label: 'Publicado', variant: 'success' },
+      archived: { label: 'Arquivado', variant: 'error' },
+    }
+
     grid.innerHTML = products.map(product => {
-      const statusLabel = {
-        draft: 'Rascunho',
-        published: 'Publicado',
-        archived: 'Arquivado'
-      }[product.status]
-      const statusColor = {
-        draft: 'text-text-muted',
-        published: 'text-verde-claro',
-        archived: 'text-vermelho'
-      }[product.status]
+      const status = statusMap[product.status] || { label: product.status, variant: 'neutral' }
 
       return `
-        <div class="bg-azul-profundo rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+        <Card padding="none" class="overflow-hidden hover:shadow-lg transition-shadow">
           ${product.cover_url ? `
             <img src="${product.cover_url}" alt="${product.title}" class="w-full h-48 object-cover" />
           ` : `
             <div class="w-full h-48 bg-bg-dark flex items-center justify-center">
-              <span class="text-6xl">📦</span>
+              <Icon name="package" size={48} class="text-text-muted/30" />
             </div>
           `}
           <div class="p-6">
             <div class="flex justify-between items-start mb-2">
-              <h3 class="text-xl font-bold text-dourado">${product.title}</h3>
-              <span class="${statusColor} text-sm font-semibold">${statusLabel}</span>
+              <h3 class="text-xl font-display font-bold text-dourado">${product.title}</h3>
+              <Badge variant={status.variant}>{status.label}</Badge>
             </div>
             <p class="text-text-muted text-sm mb-4 line-clamp-2">${product.description || 'Sem descrição'}</p>
             <div class="grid grid-cols-3 gap-2 mb-4 text-center">
               <div>
-                <div class="text-2xl font-bold text-text-light">${product.modules_count || 0}</div>
+                <div class="text-2xl font-display font-bold text-text-light">${product.modules_count || 0}</div>
                 <div class="text-xs text-text-muted">Módulos</div>
               </div>
               <div>
-                <div class="text-2xl font-bold text-text-light">${product.lessons_count || 0}</div>
+                <div class="text-2xl font-display font-bold text-text-light">${product.lessons_count || 0}</div>
                 <div class="text-xs text-text-muted">Aulas</div>
               </div>
               <div>
-                <div class="text-2xl font-bold text-text-light">${product.students_count || 0}</div>
+                <div class="text-2xl font-display font-bold text-text-light">${product.students_count || 0}</div>
                 <div class="text-xs text-text-muted">Alunos</div>
               </div>
             </div>
-            <div class="text-2xl font-bold text-verde-claro mb-4">
+            <div class="text-2xl font-display font-bold text-verde-claro mb-4">
               R$ ${((product.price_cents || 0) / 100).toFixed(2)}
             </div>
             <div class="flex gap-2">
-              <button 
-                onclick="openEditModal('${product.id}')"
-                class="flex-1 bg-bg-dark hover:bg-bg-dark/80 text-text-light px-4 py-2 rounded-lg text-sm transition-colors"
-              >
+              <button onclick="openEditModal('${product.id}')" class="flex-1 bg-bg-dark hover:bg-white/10 text-text-light px-4 py-2 rounded-lg text-sm transition-colors">
                 Editar
               </button>
-              <button 
-                onclick="openContentEditor('${product.id}')"
-                class="flex-1 bg-dourado/20 hover:bg-dourado/30 text-dourado px-4 py-2 rounded-lg text-sm transition-colors"
-              >
+              <button onclick="openContentEditor('${product.id}')" class="flex-1 bg-dourado/20 hover:bg-dourado/30 text-dourado px-4 py-2 rounded-lg text-sm transition-colors">
                 Conteúdo
               </button>
               ${product.status === 'published' ? `
-                <button 
-                  onclick="unpublishProduct('${product.id}')"
-                  class="bg-vermelho/20 hover:bg-vermelho/30 text-vermelho px-4 py-2 rounded-lg text-sm transition-colors"
-                >
-                  Despublicar
+                <button onclick="unpublishProduct('${product.id}')" class="bg-vermelho/20 hover:bg-vermelho/30 text-vermelho px-4 py-2 rounded-lg text-sm transition-colors">
+                  <Icon name="x" size={14} />
                 </button>
               ` : `
-                <button 
-                  onclick="publishProduct('${product.id}')"
-                  class="bg-verde-principal/20 hover:bg-verde-principal/30 text-verde-claro px-4 py-2 rounded-lg text-sm transition-colors"
-                >
-                  Publicar
+                <button onclick="publishProduct('${product.id}')" class="bg-verde-principal/20 hover:bg-verde-principal/30 text-verde-claro px-4 py-2 rounded-lg text-sm transition-colors">
+                  <Icon name="check" size={14} />
                 </button>
               `}
             </div>
           </div>
-        </div>
+        </Card>
       `
     }).join('')
   }
@@ -319,7 +305,7 @@ if (!session?.profile || !isAdmin(session.profile)) {
       document.getElementById('product-modal').classList.remove('hidden')
       document.getElementById('product-modal').classList.add('flex')
     } catch (error) {
-      alert('Erro ao carregar dados do produto')
+      window.showToast('error', 'Erro ao carregar dados do produto')
     }
   }
 
@@ -341,7 +327,7 @@ if (!session?.profile || !isAdmin(session.profile)) {
       document.getElementById('content-modal').classList.remove('hidden')
       document.getElementById('content-modal').classList.add('flex')
     } catch (error) {
-      alert('Erro ao carregar conteúdo do produto')
+      window.showToast('error', 'Erro ao carregar conteúdo')
     }
   }
 
@@ -352,7 +338,7 @@ if (!session?.profile || !isAdmin(session.profile)) {
 
   function renderModules(modules) {
     const container = document.getElementById('modules-container')
-    container.innerHTML = modules.map((module, moduleIndex) => `
+    container.innerHTML = modules.map((module) => `
       <div class="bg-bg-dark rounded-lg p-4" data-module-id="${module.id}">
         <div class="flex justify-between items-center mb-3">
           <input 
@@ -362,17 +348,11 @@ if (!session?.profile || !isAdmin(session.profile)) {
             onchange="updateModuleTitle('${module.id}', this.value)"
           />
           <div class="flex gap-2">
-            <button 
-              onclick="addLesson('${module.id}')"
-              class="text-verde-claro hover:text-verde-claro/80 text-sm"
-            >
-              + Aula
+            <button onclick="addLesson('${module.id}')" class="text-verde-claro hover:text-verde-claro/80 text-sm font-medium flex items-center gap-1">
+              <Icon name="plus" size={14} /> Aula
             </button>
-            <button 
-              onclick="removeModule('${module.id}')"
-              class="text-vermelho hover:text-vermelho/80 text-sm"
-            >
-              Remover
+            <button onclick="removeModule('${module.id}')" class="text-vermelho hover:text-vermelho/80 text-sm font-medium">
+              <Icon name="trash-2" size={14} />
             </button>
           </div>
         </div>
@@ -390,14 +370,11 @@ if (!session?.profile || !isAdmin(session.profile)) {
                 type="text" 
                 value="${lesson.video_url || ''}"
                 placeholder="URL do vídeo"
-                class="bg-bg-dark text-text-muted text-sm px-2 py-1 rounded w-48 focus:outline-none"
+                class="bg-bg-dark text-text-muted text-sm px-2 py-1 rounded w-48 focus:outline-none border border-white/10"
                 onchange="updateLessonVideo('${module.id}', '${lesson.id}', this.value)"
               />
-              <button 
-                onclick="removeLesson('${module.id}', '${lesson.id}')"
-                class="text-vermelho hover:text-vermelho/80 text-sm"
-              >
-                ×
+              <button onclick="removeLesson('${module.id}', '${lesson.id}')" class="text-vermelho hover:text-vermelho/80">
+                <Icon name="x" size={14} />
               </button>
             </div>
           `).join('')}
@@ -420,28 +397,26 @@ if (!session?.profile || !isAdmin(session.profile)) {
       if (response.ok) {
         openContentEditor(currentProductId)
       } else {
-        alert('Erro ao criar módulo')
+        window.showToast('error', 'Erro ao criar módulo')
       }
     } catch (error) {
-      alert('Erro ao criar módulo')
+      window.showToast('error', 'Erro ao criar módulo')
     }
   }
 
   async function removeModule(moduleId) {
-    if (!confirm('Tem certeza que deseja remover este módulo e todas as suas aulas?')) return
+    if (!confirm('Remover este módulo e todas as suas aulas?')) return
 
     try {
-      const response = await fetch(`/admin/api/products/${currentProductId}/modules/${moduleId}`, {
-        method: 'DELETE',
-      })
+      const response = await fetch(`/admin/api/products/${currentProductId}/modules/${moduleId}`, { method: 'DELETE' })
 
       if (response.ok) {
         openContentEditor(currentProductId)
       } else {
-        alert('Erro ao remover módulo')
+        window.showToast('error', 'Erro ao remover módulo')
       }
     } catch (error) {
-      alert('Erro ao remover módulo')
+      window.showToast('error', 'Erro ao remover módulo')
     }
   }
 
@@ -453,7 +428,7 @@ if (!session?.profile || !isAdmin(session.profile)) {
         body: JSON.stringify({ title }),
       })
     } catch (error) {
-      alert('Erro ao atualizar título do módulo')
+      window.showToast('error', 'Erro ao atualizar módulo')
     }
   }
 
@@ -471,28 +446,26 @@ if (!session?.profile || !isAdmin(session.profile)) {
       if (response.ok) {
         openContentEditor(currentProductId)
       } else {
-        alert('Erro ao criar aula')
+        window.showToast('error', 'Erro ao criar aula')
       }
     } catch (error) {
-      alert('Erro ao criar aula')
+      window.showToast('error', 'Erro ao criar aula')
     }
   }
 
   async function removeLesson(moduleId, lessonId) {
-    if (!confirm('Tem certeza que deseja remover esta aula?')) return
+    if (!confirm('Remover esta aula?')) return
 
     try {
-      const response = await fetch(`/admin/api/products/${currentProductId}/modules/${moduleId}/lessons/${lessonId}`, {
-        method: 'DELETE',
-      })
+      const response = await fetch(`/admin/api/products/${currentProductId}/modules/${moduleId}/lessons/${lessonId}`, { method: 'DELETE' })
 
       if (response.ok) {
         openContentEditor(currentProductId)
       } else {
-        alert('Erro ao remover aula')
+        window.showToast('error', 'Erro ao remover aula')
       }
     } catch (error) {
-      alert('Erro ao remover aula')
+      window.showToast('error', 'Erro ao remover aula')
     }
   }
 
@@ -504,7 +477,7 @@ if (!session?.profile || !isAdmin(session.profile)) {
         body: JSON.stringify({ title }),
       })
     } catch (error) {
-      alert('Erro ao atualizar título da aula')
+      window.showToast('error', 'Erro ao atualizar aula')
     }
   }
 
@@ -516,45 +489,41 @@ if (!session?.profile || !isAdmin(session.profile)) {
         body: JSON.stringify({ video_url }),
       })
     } catch (error) {
-      alert('Erro ao atualizar URL do vídeo')
+      window.showToast('error', 'Erro ao atualizar vídeo')
     }
   }
 
   async function publishProduct(id) {
-    if (!confirm('Tem certeza que deseja publicar este produto?')) return
+    if (!confirm('Publicar este produto?')) return
 
     try {
-      const response = await fetch(`/admin/api/products/${id}/publish`, {
-        method: 'POST',
-      })
+      const response = await fetch(`/admin/api/products/${id}/publish`, { method: 'POST' })
 
       if (response.ok) {
-        alert('Produto publicado com sucesso!')
+        window.showToast('success', 'Produto publicado!')
         loadProducts()
       } else {
-        alert('Erro ao publicar produto')
+        window.showToast('error', 'Erro ao publicar')
       }
     } catch (error) {
-      alert('Erro ao publicar produto')
+      window.showToast('error', 'Erro ao publicar produto')
     }
   }
 
   async function unpublishProduct(id) {
-    if (!confirm('Tem certeza que deseja despublicar este produto?')) return
+    if (!confirm('Despublicar este produto?')) return
 
     try {
-      const response = await fetch(`/admin/api/products/${id}/unpublish`, {
-        method: 'POST',
-      })
+      const response = await fetch(`/admin/api/products/${id}/unpublish`, { method: 'POST' })
 
       if (response.ok) {
-        alert('Produto despublicado com sucesso!')
+        window.showToast('success', 'Produto despublicado!')
         loadProducts()
       } else {
-        alert('Erro ao despublicar produto')
+        window.showToast('error', 'Erro ao despublicar')
       }
     } catch (error) {
-      alert('Erro ao despublicar produto')
+      window.showToast('error', 'Erro ao despublicar produto')
     }
   }
 
@@ -583,15 +552,15 @@ if (!session?.profile || !isAdmin(session.profile)) {
       })
 
       if (response.ok) {
-        alert(id ? 'Produto atualizado com sucesso!' : 'Produto criado com sucesso!')
+        window.showToast('success', id ? 'Produto atualizado!' : 'Produto criado!')
         closeProductModal()
         loadProducts()
       } else {
         const errorData = await response.json()
-        alert(errorData.error || 'Erro ao salvar produto')
+        window.showToast('error', errorData.error || 'Erro ao salvar')
       }
     } catch (error) {
-      alert('Erro ao salvar produto')
+      window.showToast('error', 'Erro ao salvar produto')
     }
   })
 

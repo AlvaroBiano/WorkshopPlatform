@@ -1,0 +1,96 @@
+---
+import Icon from './Icon.astro'
+
+interface Props {
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'success'
+  size?: 'sm' | 'md' | 'lg'
+  type?: 'button' | 'submit' | 'reset'
+  disabled?: boolean
+  loading?: boolean
+  href?: string
+  icon?: string
+  iconPosition?: 'left' | 'right'
+  class?: string
+  id?: string
+}
+
+const {
+  variant = 'primary',
+  size = 'md',
+  type = 'button',
+  disabled = false,
+  loading = false,
+  href,
+  icon,
+  iconPosition = 'left',
+  class: className = '',
+  id,
+} = Astro.props
+
+const baseClasses = 'inline-flex items-center justify-center gap-2 font-semibold transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
+
+const variantClasses = {
+  primary: 'bg-gradient-to-r from-dourado to-dourado-claro text-azul-profundo hover:scale-[1.02] hover:shadow-lg hover:shadow-dourado/20 active:scale-[0.98]',
+  secondary: 'bg-transparent border-2 border-dourado text-dourado hover:bg-dourado/10 active:bg-dourado/20',
+  ghost: 'bg-transparent text-text-light hover:bg-white/5 active:bg-white/10',
+  danger: 'bg-vermelho text-white hover:bg-vermelho/80 active:bg-vermelho/90',
+  success: 'bg-verde-principal text-white hover:bg-verde-claro active:bg-verde-principal',
+}
+
+const sizeClasses = {
+  sm: 'text-xs px-3 py-1.5 rounded-md',
+  md: 'text-sm px-4 py-2.5 rounded-lg',
+  lg: 'text-base px-6 py-3 rounded-lg',
+}
+
+const classes = [
+  baseClasses,
+  variantClasses[variant],
+  sizeClasses[size],
+  className,
+].join(' ')
+
+const iconSize = size === 'sm' ? 14 : size === 'lg' ? 20 : 16
+---
+
+{href ? (
+  <a
+    href={disabled ? undefined : href}
+    class={classes}
+    id={id}
+    aria-disabled={disabled}
+  >
+    {loading ? (
+      <svg class="animate-spin" width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" opacity="0.25"/>
+        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+    ) : icon && iconPosition === 'left' ? (
+      <Icon name={icon} size={iconSize} />
+    ) : null}
+    <slot />
+    {!loading && icon && iconPosition === 'right' ? (
+      <Icon name={icon} size={iconSize} />
+    ) : null}
+  </a>
+) : (
+  <button
+    type={type}
+    class={classes}
+    disabled={disabled || loading}
+    id={id}
+  >
+    {loading ? (
+      <svg class="animate-spin" width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" opacity="0.25"/>
+        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+    ) : icon && iconPosition === 'left' ? (
+      <Icon name={icon} size={iconSize} />
+    ) : null}
+    <slot />
+    {!loading && icon && iconPosition === 'right' ? (
+      <Icon name={icon} size={iconSize} />
+    ) : null}
+  </button>
+)}

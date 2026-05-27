@@ -1,0 +1,149 @@
+---
+import Layout from '../layouts/Layout.astro'
+import Card from '../components/ui/Card.astro'
+import Icon from '../components/ui/Icon.astro'
+import Button from '../components/ui/Button.astro'
+---
+
+<Layout title="Suporte | WORKSHOP">
+  <div class="max-w-4xl mx-auto px-4 py-16">
+    <h1 class="text-4xl font-display text-dourado mb-4 text-center">Central de Suporte</h1>
+    <p class="text-text-muted text-center mb-12">Estamos aqui para ajudar. Entre em contato conosco.</p>
+
+    <div class="grid md:grid-cols-2 gap-8 mb-12">
+      <Card class="p-8 text-center">
+        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-verde-principal/10 flex items-center justify-center">
+          <Icon name="mail" size={32} class="text-verde-claro" />
+        </div>
+        <h2 class="text-xl font-display text-dourado mb-2">Email</h2>
+        <p class="text-text-muted mb-4">Resposta em até 24 horas úteis</p>
+        <a href="mailto:suporte@workshop.com" class="text-dourado hover:underline text-lg">
+          suporte@workshop.com
+        </a>
+      </Card>
+
+      <Card class="p-8 text-center">
+        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-verde-principal/10 flex items-center justify-center">
+          <Icon name="phone" size={32} class="text-verde-claro" />
+        </div>
+        <h2 class="text-xl font-display text-dourado mb-2">WhatsApp</h2>
+        <p class="text-text-muted mb-4">Atendimento Seg-Sex 9h às 18h</p>
+        <a href="https://wa.me/5511999999999" target="_blank" class="text-dourado hover:underline text-lg">
+          +55 11 99999-9999
+        </a>
+      </Card>
+    </div>
+
+    <Card class="p-8 mb-12">
+      <h2 class="text-2xl font-display text-dourado mb-6 text-center">Perguntas Frequentes</h2>
+      
+      <div class="space-y-4">
+        <details class="p-4 rounded-lg bg-bg-dark/50 group">
+          <summary class="flex items-center justify-between cursor-pointer text-text-light font-medium">
+            <span>Como posso acessar meu curso?</span>
+            <Icon name="chevron-down" size={20} class="text-dourado transform group-open:rotate-180 transition-transform" />
+          </summary>
+          <p class="text-text-muted mt-4 leading-relaxed">
+            Após a confirmação do pagamento, você receberá um email com instruções de acesso. 
+            Basta fazer login na plataforma com seu email e senha cadastrados.
+          </p>
+        </details>
+
+        <details class="p-4 rounded-lg bg-bg-dark/50 group">
+          <summary class="flex items-center justify-between cursor-pointer text-text-light font-medium">
+            <span>Esqueci minha senha, o que fazer?</span>
+            <Icon name="chevron-down" size={20} class="text-dourado transform group-open:rotate-180 transition-transform" />
+          </summary>
+          <p class="text-text-muted mt-4 leading-relaxed">
+            Clique em "Esqueci minha senha" na página de login. Você receberá um email com instruções 
+            para redefinir sua senha. Verifique também a pasta de spam.
+          </p>
+        </details>
+
+        <details class="p-4 rounded-lg bg-bg-dark/50 group">
+          <summary class="flex items-center justify-between cursor-pointer text-text-light font-medium">
+            <span>Posso acessar pelo celular?</span>
+            <Icon name="chevron-down" size={20} class="text-dourado transform group-open:rotate-180 transition-transform" />
+          </summary>
+          <p class="text-text-muted mt-4 leading-relaxed">
+            Sim! Nossa plataforma é totalmente responsiva e pode ser acessada por qualquer dispositivo 
+            com navegador moderno, incluindo smartphones e tablets.
+          </p>
+        </details>
+
+        <details class="p-4 rounded-lg bg-bg-dark/50 group">
+          <summary class="flex items-center justify-between cursor-pointer text-text-light font-medium">
+            <span>Como solicitar reembolso?</span>
+            <Icon name="chevron-down" size={20} class="text-dourado transform group-open:rotate-180 transition-transform" />
+          </summary>
+          <p class="text-text-muted mt-4 leading-relaxed">
+            Você tem 7 dias de garantia a partir da data da compra. Para solicitar reembolso, 
+            envie um email para suporte@workshop.com com o assunto "Solicitação de Reembolso" 
+            incluindo seu email cadastrado e o motivo.
+          </p>
+        </details>
+
+        <details class="p-4 rounded-lg bg-bg-dark/50 group">
+          <summary class="flex items-center justify-between cursor-pointer text-text-light font-medium">
+            <span>Por quanto tempo tenho acesso ao conteúdo?</span>
+            <Icon name="chevron-down" size={20} class="text-dourado transform group-open:rotate-180 transition-transform" />
+          </summary>
+          <p class="text-text-muted mt-4 leading-relaxed">
+            Seu acesso é vitalício! Você pode assistir às aulas quantas vezes quiser, 
+            no seu ritmo. O conteúdo permanece disponível mesmo após a conclusão do curso.
+          </p>
+        </details>
+
+        <details class="p-4 rounded-lg bg-bg-dark/50 group">
+          <summary class="flex items-center justify-between cursor-pointer text-text-light font-medium">
+            <span>Posso fazer download das aulas?</span>
+            <Icon name="chevron-down" size={20} class="text-dourado transform group-open:rotate-180 transition-transform" />
+          </summary>
+          <p class="text-text-muted mt-4 leading-relaxed">
+            Não é permitido o download das aulas em vídeo. Você tem acesso vitalício à plataforma 
+            para assistir quando quiser. Materiais complementares (apostilas, PDFs) podem ser baixados.
+          </p>
+        </details>
+      </div>
+    </Card>
+
+    <Card class="p-8">
+      <h2 class="text-2xl font-display text-dourado mb-6 text-center">Envie sua Mensagem</h2>
+      
+      <form class="space-y-6">
+        <div class="grid md:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-sm font-medium text-text-light mb-2">Nome</label>
+            <input type="text" class="input" placeholder="Seu nome completo" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-text-light mb-2">Email</label>
+            <input type="email" class="input" placeholder="seu@email.com" />
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-text-light mb-2">Assunto</label>
+          <select class="input">
+            <option value="">Selecione um assunto</option>
+            <option value="duvida">Dúvida sobre conteúdo</option>
+            <option value="tecnico">Problema técnico</option>
+            <option value="pagamento">Questão de pagamento</option>
+            <option value="outro">Outro assunto</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-text-light mb-2">Mensagem</label>
+          <textarea rows="5" class="input" placeholder="Descreva sua dúvida ou problema em detalhes..."></textarea>
+        </div>
+
+        <div class="text-center">
+          <Button type="submit" variant="primary" size="lg" icon="send">
+            Enviar Mensagem
+          </Button>
+        </div>
+      </form>
+    </Card>
+  </div>
+</Layout>

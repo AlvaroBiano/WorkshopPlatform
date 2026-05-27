@@ -1,0 +1,147 @@
+---
+interface Option {
+  value: string
+  label: string
+  disabled?: boolean
+}
+
+interface Props {
+  type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'url' | 'search' | 'date' | 'datetime-local' | 'time' | 'file'
+  name?: string
+  id?: string
+  value?: string
+  placeholder?: string
+  disabled?: boolean
+  readonly?: boolean
+  required?: boolean
+  min?: number | string
+  max?: number | string
+  step?: number | string
+  minlength?: number
+  maxlength?: number
+  pattern?: string
+  accept?: string
+  multiple?: boolean
+  label?: string
+  hint?: string
+  error?: string
+  helperText?: string
+  options?: Option[]
+  rows?: number
+  class?: string
+  autocomplete?: string
+}
+
+const {
+  type = 'text',
+  name,
+  id,
+  value,
+  placeholder,
+  disabled = false,
+  readonly = false,
+  required = false,
+  min,
+  max,
+  step,
+  minlength,
+  maxlength,
+  pattern,
+  accept,
+  multiple,
+  label,
+  hint,
+  error,
+  helperText,
+  options,
+  rows = 4,
+  class: className = '',
+  autocomplete,
+} = Astro.props
+
+const inputId = id || name || `input-${Math.random().toString(36).slice(2)}`
+
+const baseInputClasses = 'w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light placeholder-text-muted transition-all duration-200 focus:outline-none focus:border-dourado focus:ring-2 focus:ring-dourado/20 disabled:opacity-50 disabled:cursor-not-allowed'
+
+const inputClasses = error ? `${baseInputClasses} border-vermelho/50 focus:border-vermelho focus:ring-vermelho/20` : baseInputClasses
+
+const isTextarea = type === 'textarea' || type === 'multiline'
+const isSelect = type === 'select' || options
+---
+
+<div class:list={['space-y-1.5', className]}>
+  {label && (
+    <label for={inputId} class="block text-sm font-medium text-text-light">
+      {label}
+      {required && <span class="text-vermelho ml-0.5">*</span>}
+    </label>
+  )}
+
+  {isTextarea ? (
+    <textarea
+      id={inputId}
+      name={name}
+      placeholder={placeholder}
+      disabled={disabled}
+      readonly={readonly}
+      required={required}
+      rows={rows}
+      minlength={minlength}
+      maxlength={maxlength}
+      class={inputClasses}
+      aria-invalid={error ? 'true' : undefined}
+      aria-describedby={error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined}
+    >{value || ''}</textarea>
+  ) : isSelect ? (
+    <select
+      id={inputId}
+      name={name}
+      disabled={disabled}
+      readonly={readonly}
+      required={required}
+      class={inputClasses}
+      aria-invalid={error ? 'true' : undefined}
+      aria-describedby={error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined}
+    >
+      {placeholder && <option value="">{placeholder}</option>}
+      {options?.map(opt => (
+        <option value={opt.value} disabled={opt.disabled}>{opt.label}</option>
+      ))}
+    </select>
+  ) : (
+    <input
+      type={type !== 'textarea' && type !== 'select' && type !== 'multiline' ? type : undefined}
+      id={inputId}
+      name={name}
+      value={value}
+      placeholder={placeholder}
+      disabled={disabled}
+      readonly={readonly}
+      required={required}
+      min={min}
+      max={max}
+      step={step}
+      minlength={minlength}
+      maxlength={maxlength}
+      pattern={pattern}
+      accept={accept}
+      multiple={multiple}
+      autocomplete={autocomplete}
+      class={inputClasses}
+      aria-invalid={error ? 'true' : undefined}
+      aria-describedby={error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined}
+    />
+  )}
+
+  {error && (
+    <p id={`${inputId}-error`} class="text-xs text-vermelho flex items-center gap-1">
+      {error}
+    </p>
+  )}
+
+  {hint && !error && (
+    <p id={`${inputId}-hint`} class="text-xs text-text-muted">
+      {hint}
+    </p>
+  )}
+</div>

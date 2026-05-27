@@ -1,5 +1,9 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro'
+import Card from '../../components/ui/Card.astro'
+import Badge from '../../components/ui/Badge.astro'
+import Icon from '../../components/ui/Icon.astro'
+import Button from '../../components/ui/Button.astro'
 import { getSessionFromCookies, isAdmin } from '../../lib/auth'
 
 const session = await getSessionFromCookies(Astro.cookies)
@@ -9,173 +13,182 @@ if (!session?.profile || !isAdmin(session.profile)) {
 ---
 
 <AdminLayout title="Financeiro">
-  <div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold text-dourado mb-8">Financeiro</h1>
+  <div class="mb-8">
+    <h1 class="text-3xl font-display font-bold text-dourado mb-8">Financeiro</h1>
 
-    <!-- Cards de Estatísticas -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-      <div class="bg-azul-profundo rounded-lg p-6">
-        <div class="text-text-muted text-sm mb-2">Receita Total</div>
-        <div class="text-3xl font-bold text-verde-claro" id="stat-total-revenue">R$ 0,00</div>
-      </div>
-      <div class="bg-azul-profundo rounded-lg p-6">
-        <div class="text-text-muted text-sm mb-2">Receita do Mês</div>
-        <div class="text-3xl font-bold text-verde-claro" id="stat-month-revenue">R$ 0,00</div>
-      </div>
-      <div class="bg-azul-profundo rounded-lg p-6">
-        <div class="text-text-muted text-sm mb-2">Pedidos Pendentes</div>
-        <div class="text-3xl font-bold text-dourado" id="stat-pending-count">0</div>
-        <div class="text-sm text-text-muted mt-1" id="stat-pending-amount">R$ 0,00</div>
-      </div>
-      <div class="bg-azul-profundo rounded-lg p-6">
-        <div class="text-text-muted text-sm mb-2">Aprovados Hoje</div>
-        <div class="text-3xl font-bold text-verde-claro" id="stat-approved-today">0</div>
-        <div class="text-sm text-text-muted mt-1" id="stat-approved-today-amount">R$ 0,00</div>
-      </div>
-    </div>
-
-    <!-- Filtros -->
-    <div class="bg-azul-profundo rounded-lg p-6 mb-6">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label class="block text-text-muted text-sm mb-2">Buscar</label>
-          <input 
-            type="text" 
-            id="search-input"
-            placeholder="Nome, email ou número do pedido..."
-            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
-          />
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <Card class="p-5">
+        <div class="flex items-center justify-between mb-2">
+          <div class="w-10 h-10 rounded-lg bg-verde-principal/10 flex items-center justify-center">
+            <Icon name="trending-up" size={20} class="text-verde-claro" />
+          </div>
+          <span class="text-xs uppercase tracking-wider text-text-muted">Total</span>
         </div>
-        <div>
-          <label class="block text-text-muted text-sm mb-2">Status</label>
-          <select 
-            id="status-filter"
-            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
-          >
-            <option value="">Todos</option>
-            <option value="pending">Pendentes</option>
-            <option value="approved">Aprovados</option>
-            <option value="rejected">Rejeitados</option>
-          </select>
+        <p class="text-3xl font-display font-bold text-verde-claro" id="stat-total-revenue">R$ 0</p>
+      </Card>
+      <Card class="p-5">
+        <div class="flex items-center justify-between mb-2">
+          <div class="w-10 h-10 rounded-lg bg-verde-principal/10 flex items-center justify-center">
+            <Icon name="calendar" size={20} class="text-verde-claro" />
+          </div>
+          <span class="text-xs uppercase tracking-wider text-text-muted">Mês</span>
         </div>
-        <div class="flex items-end">
-          <button 
-            onclick="loadOrders()"
-            class="w-full bg-verde-principal hover:bg-verde-escuro text-white px-6 py-2 rounded-lg font-semibold transition-colors"
-          >
-            Filtrar
-          </button>
+        <p class="text-3xl font-display font-bold text-verde-claro" id="stat-month-revenue">R$ 0</p>
+      </Card>
+      <Card class="p-5">
+        <div class="flex items-center justify-between mb-2">
+          <div class="w-10 h-10 rounded-lg bg-dourado/10 flex items-center justify-center">
+            <Icon name="clock" size={20} class="text-dourado" />
+          </div>
+          <span class="text-xs uppercase tracking-wider text-text-muted">Pendentes</span>
         </div>
-      </div>
-    </div>
-
-    <!-- Tabela de Pedidos -->
-    <div class="bg-azul-profundo rounded-lg overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-bg-dark/50">
-            <tr>
-              <th class="px-6 py-4 text-left text-text-muted font-semibold">Número</th>
-              <th class="px-6 py-4 text-left text-text-muted font-semibold">Aluno</th>
-              <th class="px-6 py-4 text-left text-text-muted font-semibold">Produto</th>
-              <th class="px-6 py-4 text-left text-text-muted font-semibold">Valor</th>
-              <th class="px-6 py-4 text-left text-text-muted font-semibold">Status</th>
-              <th class="px-6 py-4 text-left text-text-muted font-semibold">Data</th>
-              <th class="px-6 py-4 text-left text-text-muted font-semibold">Ações</th>
-            </tr>
-          </thead>
-          <tbody id="orders-table">
-            <tr>
-              <td colspan="7" class="px-6 py-8 text-center text-text-muted">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-dourado mx-auto"></div>
-                <p class="mt-2">Carregando...</p>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Paginação -->
-      <div class="px-6 py-4 bg-bg-dark/50 flex justify-between items-center">
-        <div class="text-text-muted text-sm">
-          Mostrando <span id="showing-start">0</span> a <span id="showing-end">0</span> de <span id="total-items">0</span> pedidos
+        <p class="text-3xl font-display font-bold text-dourado" id="stat-pending-count">0</p>
+        <p class="text-text-muted text-sm mt-1" id="stat-pending-amount">R$ 0</p>
+      </Card>
+      <Card class="p-5">
+        <div class="flex items-center justify-between mb-2">
+          <div class="w-10 h-10 rounded-lg bg-verde-principal/10 flex items-center justify-center">
+            <Icon name="check-circle" size={20} class="text-verde-claro" />
+          </div>
+          <span class="text-xs uppercase tracking-wider text-text-muted">Hoje</span>
         </div>
-        <div class="flex gap-2" id="pagination-controls">
-          <!-- Botões de paginação serão inseridos via JS -->
-        </div>
-      </div>
+        <p class="text-3xl font-display font-bold text-verde-claro" id="stat-approved-today">0</p>
+        <p class="text-text-muted text-sm mt-1" id="stat-approved-today-amount">R$ 0</p>
+      </Card>
     </div>
   </div>
 
-  <!-- Modal de Detalhes do Pedido -->
-  <div id="order-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 overflow-y-auto">
-    <div class="bg-azul-profundo rounded-lg p-8 max-w-2xl w-full mx-4 my-8">
-      <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-dourado">Detalhes do Pedido</h2>
-        <button onclick="closeOrderModal()" class="text-text-muted hover:text-text-light text-2xl">&times;</button>
+  <Card class="p-6 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-text-muted mb-2">Buscar</label>
+        <input 
+          type="text" 
+          id="search-input"
+          placeholder="Nome, email ou número..."
+          class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light placeholder-text-muted focus:outline-none focus:border-dourado transition-colors"
+        />
       </div>
-
-      <div id="order-details">
-        <!-- Detalhes serão inseridos via JS -->
+      <div>
+        <label class="block text-sm font-medium text-text-muted mb-2">Status</label>
+        <select 
+          id="status-filter"
+          class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light focus:outline-none focus:border-dourado transition-colors"
+        >
+          <option value="">Todos</option>
+          <option value="pending">Pendentes</option>
+          <option value="approved">Aprovados</option>
+          <option value="rejected">Rejeitados</option>
+        </select>
       </div>
-
-      <div class="flex gap-4 mt-6">
+      <div class="flex items-end">
         <button 
-          onclick="closeOrderModal()"
-          class="flex-1 bg-bg-dark hover:bg-bg-dark/80 text-text-light px-6 py-3 rounded-lg font-semibold transition-colors"
+          onclick="loadOrders()"
+          class="w-full bg-verde-principal hover:bg-verde-claro text-white px-6 py-2.5 rounded-lg font-semibold transition-colors inline-flex items-center justify-center gap-2"
         >
-          Fechar
-        </button>
-        <button 
-          id="approve-btn"
-          onclick="approveOrder()"
-          class="flex-1 bg-verde-principal hover:bg-verde-escuro text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-        >
-          Aprovar Pedido
-        </button>
-        <button 
-          id="reject-btn"
-          onclick="openRejectModal()"
-          class="flex-1 bg-vermelho hover:bg-vermelho/80 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-        >
-          Rejeitar Pedido
+          <Icon name="filter" size={16} />
+          Filtrar
         </button>
       </div>
     </div>
-  </div>
+  </Card>
 
-  <!-- Modal de Rejeição -->
-  <div id="reject-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50">
-    <div class="bg-azul-profundo rounded-lg p-8 max-w-md w-full mx-4">
-      <h2 class="text-2xl font-bold text-vermelho mb-6">Rejeitar Pedido</h2>
-      <form id="reject-form">
-        <div class="mb-6">
-          <label class="block text-text-muted text-sm mb-2">Motivo da Rejeição *</label>
-          <textarea 
-            id="reject-reason"
-            required
-            rows="4"
-            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
-            placeholder="Descreva o motivo da rejeição..."
-          ></textarea>
+  <Card padding="none">
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-bg-dark/50">
+          <tr>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Número</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Aluno</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Produto</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Valor</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Status</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Data</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="orders-table">
+          <tr>
+            <td colspan="7" class="px-6 py-12 text-center">
+              <div class="flex flex-col items-center">
+                <div class="animate-spin rounded-full h-10 w-10 border-2 border-dourado/20 border-t-dourado mb-4"></div>
+                <p class="text-text-muted">Carregando pedidos...</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="px-6 py-4 bg-bg-dark/50 flex justify-between items-center border-t border-white/5">
+      <div class="text-sm text-text-muted">
+        Mostrando <span id="showing-start" class="font-semibold text-text-light">0</span> a <span id="showing-end" class="font-semibold text-text-light">0</span> de <span id="total-items" class="font-semibold text-text-light">0</span> pedidos
+      </div>
+      <div class="flex gap-2" id="pagination-controls"></div>
+    </div>
+  </Card>
+
+  <div id="order-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeOrderModal()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4 overflow-y-auto">
+      <div class="bg-azul-profundo rounded-xl border border-white/10 shadow-2xl w-full max-w-2xl my-8 transform transition-all">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-white/5">
+          <h2 class="text-xl font-display font-bold text-dourado">Detalhes do Pedido</h2>
+          <button onclick="closeOrderModal()" class="p-2 text-text-muted hover:text-text-light hover:bg-white/5 rounded-lg transition-colors">
+            <Icon name="x" size={20} />
+          </button>
         </div>
 
-        <div class="flex gap-4">
-          <button 
-            type="button"
-            onclick="closeRejectModal()"
-            class="flex-1 bg-bg-dark hover:bg-bg-dark/80 text-text-light px-6 py-3 rounded-lg font-semibold transition-colors"
-          >
-            Cancelar
+        <div id="order-details" class="p-6"></div>
+
+        <div class="px-6 pb-6 flex gap-4">
+          <button onclick="closeOrderModal()" class="flex-1 bg-bg-dark hover:bg-white/5 text-text-light px-4 py-3 rounded-lg font-semibold transition-colors">
+            Fechar
           </button>
-          <button 
-            type="submit"
-            class="flex-1 bg-vermelho hover:bg-vermelho/80 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-          >
+          <button id="approve-btn" onclick="approveOrder()" class="flex-1 bg-verde-principal hover:bg-verde-claro text-white px-4 py-3 rounded-lg font-semibold transition-colors">
+            Aprovar
+          </button>
+          <button id="reject-btn" onclick="openRejectModal()" class="flex-1 bg-vermelho hover:bg-vermelho/80 text-white px-4 py-3 rounded-lg font-semibold transition-colors">
             Rejeitar
           </button>
         </div>
-      </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="reject-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeRejectModal()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="bg-azul-profundo rounded-xl border border-white/10 shadow-2xl w-full max-w-md transform transition-all">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-white/5">
+          <h2 class="text-xl font-display font-bold text-vermelho">Rejeitar Pedido</h2>
+          <button onclick="closeRejectModal()" class="p-2 text-text-muted hover:text-text-light hover:bg-white/5 rounded-lg transition-colors">
+            <Icon name="x" size={20} />
+          </button>
+        </div>
+
+        <form id="reject-form" class="p-6">
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-text-muted mb-2">Motivo da Rejeição *</label>
+            <textarea 
+              id="reject-reason"
+              required
+              rows="4"
+              class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light focus:outline-none focus:border-dourado transition-colors"
+              placeholder="Descreva o motivo..."
+            ></textarea>
+          </div>
+
+          <div class="flex gap-4">
+            <button type="button" onclick="closeRejectModal()" class="flex-1 bg-bg-dark hover:bg-white/5 text-text-light px-4 py-3 rounded-lg font-semibold transition-colors">
+              Cancelar
+            </button>
+            <button type="submit" class="flex-1 bg-vermelho hover:bg-vermelho/80 text-white px-4 py-3 rounded-lg font-semibold transition-colors">
+              Rejeitar
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 </AdminLayout>
@@ -198,7 +211,7 @@ if (!session?.profile || !isAdmin(session.profile)) {
       document.getElementById('stat-approved-today').textContent = data.approved_today_count
       document.getElementById('stat-approved-today-amount').textContent = `R$ ${(data.approved_today_amount_cents / 100).toFixed(2)}`
     } catch (error) {
-      console.error('Erro ao carregar visão geral:', error)
+      console.error('Erro ao carregar:', error)
     }
   }
 
@@ -220,11 +233,13 @@ if (!session?.profile || !isAdmin(session.profile)) {
       renderOrders(data.orders)
       renderPagination(data)
     } catch (error) {
-      console.error('Erro ao carregar pedidos:', error)
       document.getElementById('orders-table').innerHTML = `
         <tr>
-          <td colspan="7" class="px-6 py-8 text-center text-vermelho">
-            Erro ao carregar pedidos
+          <td colspan="7" class="px-6 py-12 text-center">
+            <div class="flex flex-col items-center">
+              <Icon name="alert-circle" size={48} class="text-vermelho mb-4" />
+              <p class="text-vermelho font-medium">Erro ao carregar pedidos</p>
+            </div>
           </td>
         </tr>
       `
@@ -234,11 +249,14 @@ if (!session?.profile || !isAdmin(session.profile)) {
   function renderOrders(orders) {
     const tbody = document.getElementById('orders-table')
     
-    if (orders.length === 0) {
+    if (!orders || orders.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="7" class="px-6 py-8 text-center text-text-muted">
-            Nenhum pedido encontrado
+          <td colspan="7" class="px-6 py-12 text-center">
+            <div class="flex flex-col items-center">
+              <Icon name="shopping-bag" size={48} class="text-text-muted/30 mb-4" />
+              <p class="text-text-muted">Nenhum pedido encontrado</p>
+            </div>
           </td>
         </tr>
       `
@@ -246,20 +264,18 @@ if (!session?.profile || !isAdmin(session.profile)) {
     }
 
     tbody.innerHTML = orders.map(order => {
-      const statusLabel = {
-        pending: 'Pendente',
-        approved: 'Aprovado',
-        rejected: 'Rejeitado'
-      }[order.status]
-      const statusColor = {
-        pending: 'text-dourado',
-        approved: 'text-verde-claro',
-        rejected: 'text-vermelho'
-      }[order.status]
+      const statusMap = {
+        pending: { label: 'Pendente', variant: 'warning' },
+        approved: { label: 'Aprovado', variant: 'success' },
+        rejected: { label: 'Rejeitado', variant: 'error' },
+      }
+      const status = statusMap[order.status] || { label: order.status, variant: 'neutral' }
 
       return `
-        <tr class="border-t border-verde-principal/10 hover:bg-bg-dark/30">
-          <td class="px-6 py-4 text-text-light font-mono text-sm">${order.order_number}</td>
+        <tr class="border-t border-white/5 hover:bg-white/[0.02] transition-colors">
+          <td class="px-6 py-4">
+            <span class="font-mono text-sm text-dourado font-semibold">${order.order_number}</span>
+          </td>
           <td class="px-6 py-4">
             <div class="text-text-light">${order.user_name || '—'}</div>
             <div class="text-text-muted text-sm">${order.user_email || '—'}</div>
@@ -269,17 +285,14 @@ if (!session?.profile || !isAdmin(session.profile)) {
             R$ ${((order.amount_cents || 0) / 100).toFixed(2)}
           </td>
           <td class="px-6 py-4">
-            <span class="${statusColor} font-semibold">${statusLabel}</span>
+            <Badge variant={status.variant}>{status.label}</Badge>
           </td>
-          <td class="px-6 py-4 text-text-muted">
+          <td class="px-6 py-4 text-text-muted text-sm">
             ${new Date(order.created_at).toLocaleDateString('pt-BR')}
           </td>
           <td class="px-6 py-4">
-            <button 
-              onclick="openOrderModal('${order.id}')"
-              class="text-dourado hover:text-dourado/80 text-sm"
-            >
-              Ver Detalhes
+            <button onclick="openOrderModal('${order.id}')" class="text-dourado hover:text-dourado/80 text-sm font-medium flex items-center gap-1">
+              <Icon name="eye" size={14} /> Ver
             </button>
           </td>
         </tr>
@@ -288,7 +301,7 @@ if (!session?.profile || !isAdmin(session.profile)) {
   }
 
   function renderPagination(data) {
-    const { page, totalPages, total, orders } = data
+    const { page, totalPages, total } = data
     const start = (page - 1) * 20 + 1
     const end = Math.min(page * 20, total)
 
@@ -300,21 +313,21 @@ if (!session?.profile || !isAdmin(session.profile)) {
     let html = ''
 
     if (page > 1) {
-      html += `<button onclick="goToPage(${page - 1})" class="px-4 py-2 bg-bg-dark hover:bg-bg-dark/80 text-text-light rounded-lg">Anterior</button>`
+      html += `<button onclick="goToPage(${page - 1})" class="px-4 py-2 bg-bg-dark hover:bg-white/10 text-text-light rounded-lg text-sm font-medium transition-colors">Anterior</button>`
     }
 
     for (let i = 1; i <= totalPages; i++) {
       if (i === page) {
-        html += `<button class="px-4 py-2 bg-verde-principal text-white rounded-lg">${i}</button>`
+        html += `<button class="px-4 py-2 bg-verde-principal text-white rounded-lg text-sm font-medium">${i}</button>`
       } else if (i === 1 || i === totalPages || (i >= page - 2 && i <= page + 2)) {
-        html += `<button onclick="goToPage(${i})" class="px-4 py-2 bg-bg-dark hover:bg-bg-dark/80 text-text-light rounded-lg">${i}</button>`
+        html += `<button onclick="goToPage(${i})" class="px-4 py-2 bg-bg-dark hover:bg-white/10 text-text-light rounded-lg text-sm font-medium transition-colors">${i}</button>`
       } else if (i === page - 3 || i === page + 3) {
         html += `<span class="px-2 text-text-muted">...</span>`
       }
     }
 
     if (page < totalPages) {
-      html += `<button onclick="goToPage(${page + 1})" class="px-4 py-2 bg-bg-dark hover:bg-bg-dark/80 text-text-light rounded-lg">Próximo</button>`
+      html += `<button onclick="goToPage(${page + 1})" class="px-4 py-2 bg-bg-dark hover:bg-white/10 text-text-light rounded-lg text-sm font-medium transition-colors">Próximo</button>`
     }
 
     controls.innerHTML = html
@@ -332,54 +345,60 @@ if (!session?.profile || !isAdmin(session.profile)) {
       const data = await response.json()
       const order = data.order
 
-      const details = document.getElementById('order-details')
-      details.innerHTML = `
+      const statusMap = {
+        pending: { label: 'Pendente', variant: 'warning' },
+        approved: { label: 'Aprovado', variant: 'success' },
+        rejected: { label: 'Rejeitado', variant: 'error' },
+      }
+      const status = statusMap[order.status] || { label: order.status, variant: 'neutral' }
+
+      document.getElementById('order-details').innerHTML = `
         <div class="space-y-4">
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <div class="text-text-muted text-sm">Número do Pedido</div>
-              <div class="text-text-light font-mono">${order.order_number}</div>
+              <div class="text-text-muted text-sm mb-1">Número</div>
+              <div class="text-text-light font-mono font-semibold">${order.order_number}</div>
             </div>
             <div>
-              <div class="text-text-muted text-sm">Status</div>
-              <div class="text-text-light font-semibold">${order.status}</div>
+              <div class="text-text-muted text-sm mb-1">Status</div>
+              <Badge variant={status.variant}>{status.label}</Badge>
             </div>
           </div>
           <div>
-            <div class="text-text-muted text-sm">Aluno</div>
+            <div class="text-text-muted text-sm mb-1">Aluno</div>
             <div class="text-text-light">${order.user_name}</div>
             <div class="text-text-muted text-sm">${order.user_email}</div>
             ${order.user_whatsapp ? `<div class="text-text-muted text-sm">${order.user_whatsapp}</div>` : ''}
           </div>
           <div>
-            <div class="text-text-muted text-sm">Produto</div>
+            <div class="text-text-muted text-sm mb-1">Produto</div>
             <div class="text-text-light">${order.product_title}</div>
           </div>
           <div>
-            <div class="text-text-muted text-sm">Valor</div>
-            <div class="text-verde-claro text-2xl font-bold">R$ ${((order.amount_cents || 0) / 100).toFixed(2)}</div>
+            <div class="text-text-muted text-sm mb-1">Valor</div>
+            <div class="text-verde-claro text-2xl font-display font-bold">R$ ${((order.amount_cents || 0) / 100).toFixed(2)}</div>
           </div>
           ${order.payment_proof_url ? `
             <div>
-              <div class="text-text-muted text-sm mb-2">Comprovante de Pagamento</div>
-              <img src="${order.payment_proof_url}" alt="Comprovante" class="w-full rounded-lg border border-verde-principal/30" />
+              <div class="text-text-muted text-sm mb-2">Comprovante</div>
+              <img src="${order.payment_proof_url}" alt="Comprovante" class="w-full rounded-lg border border-white/10" />
             </div>
           ` : ''}
           <div>
-            <div class="text-text-muted text-sm">Data do Pedido</div>
+            <div class="text-text-muted text-sm mb-1">Data</div>
             <div class="text-text-light">${new Date(order.created_at).toLocaleString('pt-BR')}</div>
           </div>
           ${order.approved_at ? `
             <div>
-              <div class="text-text-muted text-sm">Aprovado em</div>
+              <div class="text-text-muted text-sm mb-1">Aprovado em</div>
               <div class="text-verde-claro">${new Date(order.approved_at).toLocaleString('pt-BR')}</div>
             </div>
           ` : ''}
           ${order.rejected_at ? `
-            <div>
-              <div class="text-text-muted text-sm">Rejeitado em</div>
+            <div class="p-4 bg-vermelho/10 rounded-lg border border-vermelho/20">
+              <div class="text-text-muted text-sm mb-1">Rejeitado em</div>
               <div class="text-vermelho">${new Date(order.rejected_at).toLocaleString('pt-BR')}</div>
-              <div class="text-text-muted text-sm mt-1">Motivo: ${order.rejection_reason}</div>
+              <div class="text-text-muted text-sm mt-2">Motivo: ${order.rejection_reason}</div>
             </div>
           ` : ''}
         </div>
@@ -399,7 +418,7 @@ if (!session?.profile || !isAdmin(session.profile)) {
       document.getElementById('order-modal').classList.remove('hidden')
       document.getElementById('order-modal').classList.add('flex')
     } catch (error) {
-      alert('Erro ao carregar detalhes do pedido')
+      window.showToast('error', 'Erro ao carregar detalhes')
     }
   }
 
@@ -409,24 +428,21 @@ if (!session?.profile || !isAdmin(session.profile)) {
   }
 
   async function approveOrder() {
-    if (!confirm('Tem certeza que deseja aprovar este pedido? O aluno receberá acesso imediato ao produto.')) return
+    if (!confirm('Aprovar este pedido? O aluno receberá acesso imediato.')) return
 
     try {
-      const response = await fetch(`/admin/api/financial/orders/${currentOrderId}/approve`, {
-        method: 'POST',
-      })
-
+      const response = await fetch(`/admin/api/financial/orders/${currentOrderId}/approve`, { method: 'POST' })
       if (response.ok) {
-        alert('Pedido aprovado com sucesso!')
+        window.showToast('success', 'Pedido aprovado!')
         closeOrderModal()
         loadOverview()
         loadOrders()
       } else {
         const data = await response.json()
-        alert(data.error || 'Erro ao aprovar pedido')
+        window.showToast('error', data.error || 'Erro ao aprovar')
       }
     } catch (error) {
-      alert('Erro ao aprovar pedido')
+      window.showToast('error', 'Erro ao aprovar pedido')
     }
   }
 
@@ -443,7 +459,6 @@ if (!session?.profile || !isAdmin(session.profile)) {
 
   document.getElementById('reject-form').addEventListener('submit', async (e) => {
     e.preventDefault()
-
     const reason = document.getElementById('reject-reason').value
 
     try {
@@ -454,17 +469,17 @@ if (!session?.profile || !isAdmin(session.profile)) {
       })
 
       if (response.ok) {
-        alert('Pedido rejeitado com sucesso!')
+        window.showToast('success', 'Pedido rejeitado')
         closeRejectModal()
         closeOrderModal()
         loadOverview()
         loadOrders()
       } else {
         const data = await response.json()
-        alert(data.error || 'Erro ao rejeitar pedido')
+        window.showToast('error', data.error || 'Erro ao rejeitar')
       }
     } catch (error) {
-      alert('Erro ao rejeitar pedido')
+      window.showToast('error', 'Erro ao rejeitar pedido')
     }
   })
 

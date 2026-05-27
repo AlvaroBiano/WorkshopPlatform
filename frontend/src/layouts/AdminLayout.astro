@@ -1,5 +1,7 @@
 ---
 import '../styles/global.css'
+import Icon from '../components/ui/Icon.astro'
+import Toast from '../components/ui/Toast.astro'
 
 interface Props {
   title?: string
@@ -13,14 +15,14 @@ if (!user) {
 }
 
 const navItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: '📊', href: '/admin' },
-  { id: 'students', label: 'Alunos', icon: '👥', href: '/admin/students' },
-  { id: 'products', label: 'Produtos', icon: '📦', href: '/admin/products' },
-  { id: 'devices', label: 'Dispositivos', icon: '🖥️', href: '/admin/devices' },
-  { id: 'affiliates', label: 'Afiliados', icon: '🤝', href: '/admin/affiliates' },
-  { id: 'financial', label: 'Financeiro', icon: '💰', href: '/admin/financial' },
-  { id: 'messages', label: 'Mensagens', icon: '📨', href: '/admin/messages' },
-  { id: 'settings', label: 'Configurações', icon: '⚙️', href: '/admin/settings' },
+  { id: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard', href: '/admin' },
+  { id: 'students', label: 'Alunos', icon: 'users', href: '/admin/students' },
+  { id: 'products', label: 'Produtos', icon: 'package', href: '/admin/products' },
+  { id: 'devices', label: 'Dispositivos', icon: 'monitor', href: '/admin/devices' },
+  { id: 'affiliates', label: 'Afiliados', icon: 'handshake', href: '/admin/affiliates' },
+  { id: 'financial', label: 'Financeiro', icon: 'banknote', href: '/admin/financial' },
+  { id: 'messages', label: 'Mensagens', icon: 'mail', href: '/admin/messages' },
+  { id: 'settings', label: 'Configurações', icon: 'settings', href: '/admin/settings' },
 ]
 
 const currentPath = Astro.url.pathname
@@ -50,13 +52,13 @@ const currentPath = Astro.url.pathname
           <a
             href={item.href}
             class:list={[
-              'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
+              'flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200',
               currentPath === item.href
                 ? 'bg-dourado/10 text-dourado'
-                : 'text-text-muted hover:bg-white/5 hover:text-text-light'
+                : 'text-text-muted hover:bg-white/5 hover:text-text-light',
             ]}
           >
-            <span>{item.icon}</span>
+            <Icon name={item.icon} size={20} class="flex-shrink-0" />
             <span>{item.label}</span>
           </a>
         ))}
@@ -74,9 +76,10 @@ const currentPath = Astro.url.pathname
         </div>
         <a
           href="/logout"
-          class="block w-full mt-4 py-2 text-sm text-text-muted hover:text-text-light transition-colors text-center"
+          class="flex items-center justify-center gap-2 w-full mt-4 py-2 text-sm text-text-muted hover:text-text-light transition-colors"
         >
-          Sair
+          <Icon name="logout" size={16} />
+          <span>Sair</span>
         </a>
       </div>
     </aside>
@@ -87,6 +90,7 @@ const currentPath = Astro.url.pathname
       </header>
 
       <div class="p-6">
+        <Toast />
         <slot />
       </div>
     </main>

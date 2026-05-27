@@ -1,5 +1,8 @@
 ---
 import Layout from '../layouts/Layout.astro'
+import Icon from '../components/ui/Icon.astro'
+import Card from '../components/ui/Card.astro'
+import Button from '../components/ui/Button.astro'
 import { supabaseAdmin } from '../lib/supabase-server'
 
 const refCode = Astro.url.searchParams.get('ref')
@@ -27,167 +30,88 @@ if (refCode) {
 }
 ---
 
-<!doctype html>
-<html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WORKSHOP | Grupo Braga & Biano</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet" />
-  </head>
-  <body class="bg-[#0A0E1A] text-[#E8E8E8]">
-    <section class="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
-      <div class="absolute inset-0 bg-gradient-to-br from-[#0A2540] via-[#0A0E1A] to-[#0F5132] opacity-50"></div>
+<Layout title="WORKSHOP | Grupo Braga & Biano">
+  <section class="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-azul-profundo via-bg-dark to-verde-principal opacity-50"></div>
 
-      <div class="relative z-10 max-w-4xl mx-auto text-center">
-        <h1 class="font-['Playfair_Display'] text-5xl md:text-7xl text-[#D4AF37] mb-4 animate-fade-in">
-          WORKSHOP
-        </h1>
-        <p class="text-xl md:text-2xl text-[#8E8E8E] mb-8 animate-slide-up">
-          Grupo Braga & Biano
-        </p>
+    <div class="relative z-10 max-w-4xl mx-auto text-center">
+      <h1 class="font-display text-5xl md:text-7xl text-dourado mb-4 animate-fade-in">
+        WORKSHOP
+      </h1>
+      <p class="text-xl md:text-2xl text-text-muted mb-8 animate-slide-up">
+        Grupo Braga & Biano
+      </p>
 
-        <p class="text-lg md:text-xl text-[#E8E8E8] max-w-2xl mx-auto mb-12 animate-slide-up" style="animation-delay: 0.1s">
-          Transforme sua vida com nosso workshop premium de alta transformação.
-          <span class="text-[#D4AF37] font-semibold">32 aulas</span> distribuídas em
-          <span class="text-[#D4AF37] font-semibold">6 módulos</span> completos.
-        </p>
+      <p class="text-lg md:text-xl text-text-light max-w-2xl mx-auto mb-12 animate-slide-up" style="animation-delay: 0.1s">
+        Transforme sua vida com nosso workshop premium de alta transformação.
+        <span class="text-dourado font-semibold">32 aulas</span> distribuídas em
+        <span class="text-dourado font-semibold">6 módulos</span> completos.
+      </p>
 
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up" style="animation-delay: 0.2s">
-          <a href="/login" class="btn btn-primary text-lg px-8 py-4">
-            Entrar na Área de Membros
-          </a>
-          <a href={refCode ? `/cadastro?ref=${refCode}` : '/cadastro'} class="btn btn-secondary text-lg px-8 py-4">
-            Quero Participar
-          </a>
-        </div>
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up" style="animation-delay: 0.2s">
+        <Button href="/login" variant="primary" size="lg">
+          Entrar na Área de Membros
+        </Button>
+        <Button href={refCode ? `/cadastro?ref=${refCode}` : '/cadastro'} variant="secondary" size="lg">
+          Quero Participar
+        </Button>
       </div>
+    </div>
 
-      <div class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#0A0E1A] to-transparent"></div>
-    </section>
+    <div class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-bg-dark to-transparent"></div>
+  </section>
 
-    <section class="py-20 px-4">
-      <div class="max-w-6xl mx-auto">
-        <h2 class="font-['Playfair_Display'] text-3xl md:text-4xl text-[#D4AF37] text-center mb-16">
-          O Que Você Vai Encontrar
-        </h2>
+  <section class="py-20 px-4">
+    <div class="max-w-6xl mx-auto">
+      <h2 class="font-display text-3xl md:text-4xl text-dourado text-center mb-16">
+        O Que Você Vai Encontrar
+      </h2>
 
-        <div class="grid md:grid-cols-3 gap-8">
-          <div class="card p-6 text-center">
-            <div class="text-4xl mb-4">🎓</div>
-            <h3 class="text-xl text-[#D4AF37] mb-3">6 Módulos Completos</h3>
-            <p class="text-[#8E8E8E]">
-              Conteúdo estruturado para você avançar passo a passo na sua jornada de transformação.
-            </p>
+      <div class="grid md:grid-cols-3 gap-8">
+        <Card class="text-center">
+          <div class="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-dourado/10">
+            <Icon name="graduation-cap" size={32} class="text-dourado" />
           </div>
+          <h3 class="text-xl text-dourado mb-3">6 Módulos Completos</h3>
+          <p class="text-text-muted">
+            Conteúdo estruturado para você avançar passo a passo na sua jornada de transformação.
+          </p>
+        </Card>
 
-          <div class="card p-6 text-center">
-            <div class="text-4xl mb-4">📺</div>
-            <h3 class="text-xl text-[#D4AF37] mb-3">Vídeos em Alta Qualidade</h3>
-            <p class="text-[#8E8E8E]">
-              Player integrado com suporte a múltiplos dispositivos, legendas e muito mais.
-            </p>
+        <Card class="text-center">
+          <div class="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-dourado/10">
+            <Icon name="video" size={32} class="text-dourado" />
           </div>
+          <h3 class="text-xl text-dourado mb-3">Vídeos em Alta Qualidade</h3>
+          <p class="text-text-muted">
+            Player integrado com suporte a múltiplos dispositivos, legendas e muito mais.
+          </p>
+        </Card>
 
-          <div class="card p-6 text-center">
-            <div class="text-4xl mb-4">📊</div>
-            <h3 class="text-xl text-[#D4AF37] mb-3">Acompanhe Seu Progresso</h3>
-            <p class="text-[#8E8E8E]">
-              Sistema inteligente que salva sua posição e permite continuar de onde parou.
-            </p>
+        <Card class="text-center">
+          <div class="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-dourado/10">
+            <Icon name="trending-up" size={32} class="text-dourado" />
           </div>
-        </div>
+          <h3 class="text-xl text-dourado mb-3">Acompanhe Seu Progresso</h3>
+          <p class="text-text-muted">
+            Sistema inteligente que salva sua posição e permite continuar de onde parou.
+          </p>
+        </Card>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <section class="py-20 px-4 bg-[#141B2D]">
-      <div class="max-w-3xl mx-auto text-center">
-        <h2 class="font-['Playfair_Display'] text-3xl md:text-4xl text-[#D4AF37] mb-6">
-          Pronto Para Começar?
-        </h2>
-        <p class="text-lg text-[#8E8E8E] mb-8">
-          Acesso imediato após confirmação do pagamento. Sua jornada de transformação começa hoje.
-        </p>
-        <a href={refCode ? `/cadastro?ref=${refCode}` : '/cadastro'} class="btn btn-primary text-lg px-8 py-4">
-          Garantir Minha Vaga
-        </a>
-      </div>
-    </section>
-
-    <footer class="py-8 px-4 border-t border-white/5">
-      <div class="max-w-6xl mx text-center text-[#8E8E8E] text-sm">
-        <p>© 2024 WORKSHOP | Grupo Braga & Biano. Todos os direitos reservados.</p>
-        <div class="flex items-center justify-center gap-6 mt-4">
-          <a href="/termos" class="hover:text-[#D4AF37] transition-colors">Termos de Uso</a>
-          <a href="/privacidade" class="hover:text-[#D4AF37] transition-colors">Política de Privacidade</a>
-          <a href="/suporte" class="hover:text-[#D4AF37] transition-colors">Suporte</a>
-        </div>
-      </div>
-    </footer>
-  </body>
-</html>
-
-<style>
-  @import '../styles/global.css';
-
-  .btn-primary {
-    background: linear-gradient(135deg, #D4AF37 0%, #F1C40F 100%);
-    color: #0A2540;
-    font-weight: 600;
-    border-radius: 8px;
-    padding: 1rem 2rem;
-    transition: all 0.2s ease;
-  }
-
-  .btn-primary:hover {
-    transform: scale(1.02);
-    box-shadow: 0 4px 20px rgba(212, 175, 55, 0.4);
-  }
-
-  .btn-secondary {
-    background: transparent;
-    border: 2px solid #D4AF37;
-    color: #D4AF37;
-    font-weight: 600;
-    border-radius: 8px;
-    padding: 1rem 2rem;
-    transition: all 0.2s ease;
-  }
-
-  .btn-secondary:hover {
-    background-color: rgba(212, 175, 55, 0.1);
-  }
-
-  .card {
-    background-color: #141B2D;
-    border-radius: 12px;
-    border: 1px solid rgba(212, 175, 55, 0.1);
-    transition: all 0.3s ease;
-  }
-
-  .card:hover {
-    border-color: rgba(212, 175, 55, 0.3);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .animate-fade-in {
-    animation: fadeIn 1s ease-out;
-  }
-
-  .animate-slide-up {
-    animation: slideUp 1s ease-out;
-  }
-</style>
+  <section class="py-20 px-4 bg-bg-card">
+    <div class="max-w-3xl mx-auto text-center">
+      <h2 class="font-display text-3xl md:text-4xl text-dourado mb-6">
+        Pronto Para Começar?
+      </h2>
+      <p class="text-lg text-text-muted mb-8">
+        Acesso imediato após confirmação do pagamento. Sua jornada de transformação começa hoje.
+      </p>
+      <Button href={refCode ? `/cadastro?ref=${refCode}` : '/cadastro'} variant="primary" size="lg">
+        Garantir Minha Vaga
+      </Button>
+    </div>
+  </section>
+</Layout>

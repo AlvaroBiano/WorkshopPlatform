@@ -1,0 +1,39 @@
+---
+interface Props {
+  variant?: 'success' | 'warning' | 'error' | 'info' | 'neutral'
+  size?: 'sm' | 'md'
+  class?: string
+}
+
+const {
+  variant = 'neutral',
+  size = 'md',
+  class: className = '',
+} = Astro.props
+
+const baseClasses = 'inline-flex items-center font-semibold rounded-full'
+
+const variantClasses = {
+  success: 'bg-verde-principal/20 text-verde-claro',
+  warning: 'bg-dourado/20 text-dourado',
+  error: 'bg-vermelho/20 text-vermelho',
+  info: 'bg-azul-accent/20 text-azul-accent',
+  neutral: 'bg-white/5 text-text-muted',
+}
+
+const sizeClasses = {
+  sm: 'text-xs px-2 py-0.5',
+  md: 'text-xs px-3 py-1',
+}
+
+const classes = [
+  baseClasses,
+  variantClasses[variant],
+  sizeClasses[size],
+  className,
+].join(' ')
+---
+
+<span class={classes}>
+  <slot />
+</span>

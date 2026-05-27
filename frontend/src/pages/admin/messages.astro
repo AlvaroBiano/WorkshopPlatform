@@ -1,5 +1,9 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro'
+import Card from '../../components/ui/Card.astro'
+import Badge from '../../components/ui/Badge.astro'
+import Icon from '../../components/ui/Icon.astro'
+import Button from '../../components/ui/Button.astro'
 import { getSessionFromCookies, isAdmin } from '../../lib/auth'
 
 const session = await getSessionFromCookies(Astro.cookies)
@@ -9,190 +13,185 @@ if (!session?.profile || !isAdmin(session.profile)) {
 ---
 
 <AdminLayout title="Mensagens">
-  <div class="container mx-auto px-4 py-8">
+  <div class="mb-8">
     <div class="flex justify-between items-center mb-8">
-      <h1 class="text-3xl font-bold text-dourado">Mensagens</h1>
-      <button 
-        onclick="openSendModal()"
-        class="bg-verde-principal hover:bg-verde-escuro text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-      >
-        + Nova Mensagem
-      </button>
-    </div>
-
-    <!-- Filtros -->
-    <div class="bg-azul-profundo rounded-lg p-6 mb-6">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label class="block text-text-muted text-sm mb-2">Buscar</label>
-          <input 
-            type="text" 
-            id="search-input"
-            placeholder="Título, corpo ou destinatário..."
-            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
-          />
-        </div>
-        <div>
-          <label class="block text-text-muted text-sm mb-2">Tipo</label>
-          <select 
-            id="type-filter"
-            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
-          >
-            <option value="">Todos</option>
-            <option value="info">Informação</option>
-            <option value="success">Sucesso</option>
-            <option value="warning">Aviso</option>
-            <option value="error">Erro</option>
-          </select>
-        </div>
-        <div class="flex items-end">
-          <button 
-            onclick="loadNotifications()"
-            class="w-full bg-verde-principal hover:bg-verde-escuro text-white px-6 py-2 rounded-lg font-semibold transition-colors"
-          >
-            Filtrar
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tabela de Notificações -->
-    <div class="bg-azul-profundo rounded-lg overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-bg-dark/50">
-            <tr>
-              <th class="px-6 py-4 text-left text-text-muted font-semibold">Destinatário</th>
-              <th class="px-6 py-4 text-left text-text-muted font-semibold">Título</th>
-              <th class="px-6 py-4 text-left text-text-muted font-semibold">Tipo</th>
-              <th class="px-6 py-4 text-left text-text-muted font-semibold">Lida</th>
-              <th class="px-6 py-4 text-left text-text-muted font-semibold">Data</th>
-              <th class="px-6 py-4 text-left text-text-muted font-semibold">Ações</th>
-            </tr>
-          </thead>
-          <tbody id="notifications-table">
-            <tr>
-              <td colspan="6" class="px-6 py-8 text-center text-text-muted">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-dourado mx-auto"></div>
-                <p class="mt-2">Carregando...</p>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Paginação -->
-      <div class="px-6 py-4 bg-bg-dark/50 flex justify-between items-center">
-        <div class="text-text-muted text-sm">
-          Mostrando <span id="showing-start">0</span> a <span id="showing-end">0</span> de <span id="total-items">0</span> notificações
-        </div>
-        <div class="flex gap-2" id="pagination-controls">
-          <!-- Botões de paginação serão inseridos via JS -->
-        </div>
-      </div>
+      <h1 class="text-3xl font-display font-bold text-dourado">Mensagens</h1>
+      <Button onclick="openSendModal()" icon="send" variant="primary">
+        Nova Mensagem
+      </Button>
     </div>
   </div>
 
-  <!-- Modal de Enviar Mensagem -->
-  <div id="send-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 overflow-y-auto">
-    <div class="bg-azul-profundo rounded-lg p-8 max-w-2xl w-full mx-4 my-8">
-      <h2 class="text-2xl font-bold text-dourado mb-6">Nova Mensagem</h2>
-      <form id="send-form">
-        <div class="mb-4">
-          <label class="block text-text-muted text-sm mb-2">Destinatários</label>
-          <div class="flex gap-4 mb-2">
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input 
-                type="radio" 
-                name="recipient-type" 
-                value="specific" 
-                checked
-                class="accent-verde-principal"
-                onchange="toggleRecipientType()"
-              />
-              <span class="text-text-light text-sm">Usuários específicos</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input 
-                type="radio" 
-                name="recipient-type" 
-                value="all"
-                class="accent-verde-principal"
-                onchange="toggleRecipientType()"
-              />
-              <span class="text-text-light text-sm">Todos os alunos</span>
-            </label>
-          </div>
-          <select 
-            id="notification-users"
-            multiple
-            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal h-32"
-          >
-            <!-- Opções serão carregadas via JS -->
-          </select>
-          <p class="text-text-muted text-xs mt-1">Segure Ctrl/Cmd para selecionar múltiplos usuários</p>
+  <Card class="p-6 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-text-muted mb-2">Buscar</label>
+        <input 
+          type="text" 
+          id="search-input"
+          placeholder="Título, corpo ou destinatário..."
+          class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light placeholder-text-muted focus:outline-none focus:border-dourado transition-colors"
+        />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-text-muted mb-2">Tipo</label>
+        <select 
+          id="type-filter"
+          class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light focus:outline-none focus:border-dourado transition-colors"
+        >
+          <option value="">Todos</option>
+          <option value="info">Informação</option>
+          <option value="success">Sucesso</option>
+          <option value="warning">Aviso</option>
+          <option value="error">Erro</option>
+        </select>
+      </div>
+      <div class="flex items-end">
+        <button 
+          onclick="loadNotifications()"
+          class="w-full bg-verde-principal hover:bg-verde-claro text-white px-6 py-2.5 rounded-lg font-semibold transition-colors inline-flex items-center justify-center gap-2"
+        >
+          <Icon name="filter" size={16} />
+          Filtrar
+        </button>
+      </div>
+    </div>
+  </Card>
+
+  <Card padding="none">
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-bg-dark/50">
+          <tr>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Destinatário</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Título</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Tipo</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Lida</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Data</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="notifications-table">
+          <tr>
+            <td colspan="6" class="px-6 py-12 text-center">
+              <div class="flex flex-col items-center">
+                <div class="animate-spin rounded-full h-10 w-10 border-2 border-dourado/20 border-t-dourado mb-4"></div>
+                <p class="text-text-muted">Carregando...</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="px-6 py-4 bg-bg-dark/50 flex justify-between items-center border-t border-white/5">
+      <div class="text-sm text-text-muted">
+        Mostrando <span id="showing-start" class="font-semibold text-text-light">0</span> a <span id="showing-end" class="font-semibold text-text-light">0</span> de <span id="total-items" class="font-semibold text-text-light">0</span> mensagens
+      </div>
+      <div class="flex gap-2" id="pagination-controls"></div>
+    </div>
+  </Card>
+
+  <div id="send-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeSendModal()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4 overflow-y-auto">
+      <div class="bg-azul-profundo rounded-xl border border-white/10 shadow-2xl w-full max-w-2xl my-8 transform transition-all">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-white/5">
+          <h2 class="text-xl font-display font-bold text-dourado">Nova Mensagem</h2>
+          <button onclick="closeSendModal()" class="p-2 text-text-muted hover:text-text-light hover:bg-white/5 rounded-lg transition-colors">
+            <Icon name="x" size={20} />
+          </button>
         </div>
 
-        <div class="mb-4">
-          <label class="block text-text-muted text-sm mb-2">Título *</label>
-          <input 
-            type="text" 
-            id="notification-title"
-            required
-            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
-          />
-        </div>
-
-        <div class="mb-4">
-          <label class="block text-text-muted text-sm mb-2">Mensagem *</label>
-          <textarea 
-            id="notification-body"
-            required
-            rows="4"
-            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
-          ></textarea>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div>
-            <label class="block text-text-muted text-sm mb-2">Tipo</label>
+        <form id="send-form" class="p-6">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-text-muted mb-2">Destinatários</label>
+            <div class="flex gap-6 mb-3">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="radio" 
+                  name="recipient-type" 
+                  value="specific" 
+                  checked
+                  class="accent-verde-principal"
+                  onchange="toggleRecipientType()"
+                />
+                <span class="text-text-light text-sm">Usuários específicos</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="radio" 
+                  name="recipient-type" 
+                  value="all"
+                  class="accent-verde-principal"
+                  onchange="toggleRecipientType()"
+                />
+                <span class="text-text-light text-sm">Todos os alunos</span>
+              </label>
+            </div>
             <select 
-              id="notification-type"
-              class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+              id="notification-users"
+              multiple
+              class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light focus:outline-none focus:border-dourado transition-colors h-32"
             >
-              <option value="info">Informação</option>
-              <option value="success">Sucesso</option>
-              <option value="warning">Aviso</option>
-              <option value="error">Erro</option>
             </select>
+            <p class="text-text-muted text-xs mt-1">Segure Ctrl/Cmd para selecionar múltiplos usuários</p>
           </div>
-          <div>
-            <label class="block text-text-muted text-sm mb-2">Link (opcional)</label>
+
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-text-muted mb-2">Título *</label>
             <input 
-              type="url" 
-              id="notification-link"
-              placeholder="https://..."
-              class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+              type="text" 
+              id="notification-title"
+              required
+              class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light focus:outline-none focus:border-dourado transition-colors"
             />
           </div>
-        </div>
 
-        <div class="flex gap-4">
-          <button 
-            type="button"
-            onclick="closeSendModal()"
-            class="flex-1 bg-bg-dark hover:bg-bg-dark/80 text-text-light px-6 py-3 rounded-lg font-semibold transition-colors"
-          >
-            Cancelar
-          </button>
-          <button 
-            type="submit"
-            class="flex-1 bg-verde-principal hover:bg-verde-escuro text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-          >
-            Enviar
-          </button>
-        </div>
-      </form>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-text-muted mb-2">Mensagem *</label>
+            <textarea 
+              id="notification-body"
+              required
+              rows="4"
+              class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light focus:outline-none focus:border-dourado transition-colors"
+            ></textarea>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label class="block text-sm font-medium text-text-muted mb-2">Tipo</label>
+              <select 
+                id="notification-type"
+                class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light focus:outline-none focus:border-dourado transition-colors"
+              >
+                <option value="info">Informação</option>
+                <option value="success">Sucesso</option>
+                <option value="warning">Aviso</option>
+                <option value="error">Erro</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-text-muted mb-2">Link (opcional)</label>
+              <input 
+                type="url" 
+                id="notification-link"
+                placeholder="https://..."
+                class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light placeholder-text-muted focus:outline-none focus:border-dourado transition-colors"
+              />
+            </div>
+          </div>
+
+          <div class="flex gap-4">
+            <button type="button" onclick="closeSendModal()" class="flex-1 bg-bg-dark hover:bg-white/5 text-text-light px-4 py-3 rounded-lg font-semibold transition-colors">
+              Cancelar
+            </button>
+            <button type="submit" class="flex-1 bg-verde-principal hover:bg-verde-claro text-white px-4 py-3 rounded-lg font-semibold transition-colors">
+              Enviar
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 </AdminLayout>
@@ -220,11 +219,13 @@ if (!session?.profile || !isAdmin(session.profile)) {
       renderNotifications(data.notifications)
       renderPagination(data)
     } catch (error) {
-      console.error('Erro ao carregar notificações:', error)
       document.getElementById('notifications-table').innerHTML = `
         <tr>
-          <td colspan="6" class="px-6 py-8 text-center text-vermelho">
-            Erro ao carregar notificações
+          <td colspan="6" class="px-6 py-12 text-center">
+            <div class="flex flex-col items-center">
+              <Icon name="alert-circle" size={48} class="text-vermelho mb-4" />
+              <p class="text-vermelho font-medium">Erro ao carregar mensagens</p>
+            </div>
           </td>
         </tr>
       `
@@ -234,33 +235,35 @@ if (!session?.profile || !isAdmin(session.profile)) {
   function renderNotifications(notifications) {
     const tbody = document.getElementById('notifications-table')
     
-    if (notifications.length === 0) {
+    if (!notifications || notifications.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="6" class="px-6 py-8 text-center text-text-muted">
-            Nenhuma notificação encontrada
+          <td colspan="6" class="px-6 py-12 text-center">
+            <div class="flex flex-col items-center">
+              <Icon name="mail" size={48} class="text-text-muted/30 mb-4" />
+              <p class="text-text-muted">Nenhuma mensagem encontrada</p>
+            </div>
           </td>
         </tr>
       `
       return
     }
 
+    const typeMap = {
+      info: { label: 'Informação', variant: 'neutral' },
+      success: { label: 'Sucesso', variant: 'success' },
+      warning: { label: 'Aviso', variant: 'warning' },
+      error: { label: 'Erro', variant: 'error' },
+    }
+
     tbody.innerHTML = notifications.map(notification => {
-      const typeLabel = {
-        info: 'Informação',
-        success: 'Sucesso',
-        warning: 'Aviso',
-        error: 'Erro'
-      }[notification.type]
-      const typeColor = {
-        info: 'text-text-light',
-        success: 'text-verde-claro',
-        warning: 'text-dourado',
-        error: 'text-vermelho'
-      }[notification.type]
+      const type = typeMap[notification.type] || { label: notification.type, variant: 'neutral' }
+      const readBadge = notification.read 
+        ? '<Badge variant="success">Sim</Badge>'
+        : '<Badge variant="neutral">Não</Badge>'
 
       return `
-        <tr class="border-t border-verde-principal/10 hover:bg-bg-dark/30">
+        <tr class="border-t border-white/5 hover:bg-white/[0.02] transition-colors">
           <td class="px-6 py-4">
             <div class="text-text-light">${notification.user_name || '—'}</div>
             <div class="text-text-muted text-sm">${notification.user_email || '—'}</div>
@@ -270,23 +273,17 @@ if (!session?.profile || !isAdmin(session.profile)) {
             <div class="text-text-muted text-sm line-clamp-2">${notification.body}</div>
           </td>
           <td class="px-6 py-4">
-            <span class="${typeColor} font-semibold">${typeLabel}</span>
+            <Badge variant={type.variant}>{type.label}</Badge>
           </td>
           <td class="px-6 py-4">
-            ${notification.read ? 
-              '<span class="text-verde-claro">✓ Sim</span>' : 
-              '<span class="text-text-muted">Não</span>'
-            }
+            ${readBadge}
           </td>
           <td class="px-6 py-4 text-text-muted text-sm">
             ${new Date(notification.created_at).toLocaleString('pt-BR')}
           </td>
           <td class="px-6 py-4">
-            <button 
-              onclick="deleteNotification('${notification.id}')"
-              class="text-vermelho hover:text-vermelho/80 text-sm"
-            >
-              Remover
+            <button onclick="deleteNotification('${notification.id}')" class="text-vermelho hover:text-vermelho/80 text-sm font-medium flex items-center gap-1">
+              <Icon name="trash-2" size={14} /> Remover
             </button>
           </td>
         </tr>
@@ -295,7 +292,7 @@ if (!session?.profile || !isAdmin(session.profile)) {
   }
 
   function renderPagination(data) {
-    const { page, totalPages, total, notifications } = data
+    const { page, totalPages, total } = data
     const start = (page - 1) * 20 + 1
     const end = Math.min(page * 20, total)
 
@@ -307,21 +304,21 @@ if (!session?.profile || !isAdmin(session.profile)) {
     let html = ''
 
     if (page > 1) {
-      html += `<button onclick="goToPage(${page - 1})" class="px-4 py-2 bg-bg-dark hover:bg-bg-dark/80 text-text-light rounded-lg">Anterior</button>`
+      html += `<button onclick="goToPage(${page - 1})" class="px-4 py-2 bg-bg-dark hover:bg-white/10 text-text-light rounded-lg text-sm font-medium transition-colors">Anterior</button>`
     }
 
     for (let i = 1; i <= totalPages; i++) {
       if (i === page) {
-        html += `<button class="px-4 py-2 bg-verde-principal text-white rounded-lg">${i}</button>`
+        html += `<button class="px-4 py-2 bg-verde-principal text-white rounded-lg text-sm font-medium">${i}</button>`
       } else if (i === 1 || i === totalPages || (i >= page - 2 && i <= page + 2)) {
-        html += `<button onclick="goToPage(${i})" class="px-4 py-2 bg-bg-dark hover:bg-bg-dark/80 text-text-light rounded-lg">${i}</button>`
+        html += `<button onclick="goToPage(${i})" class="px-4 py-2 bg-bg-dark hover:bg-white/10 text-text-light rounded-lg text-sm font-medium transition-colors">${i}</button>`
       } else if (i === page - 3 || i === page + 3) {
         html += `<span class="px-2 text-text-muted">...</span>`
       }
     }
 
     if (page < totalPages) {
-      html += `<button onclick="goToPage(${page + 1})" class="px-4 py-2 bg-bg-dark hover:bg-bg-dark/80 text-text-light rounded-lg">Próximo</button>`
+      html += `<button onclick="goToPage(${page + 1})" class="px-4 py-2 bg-bg-dark hover:bg-white/10 text-text-light rounded-lg text-sm font-medium transition-colors">Próximo</button>`
     }
 
     controls.innerHTML = html
@@ -354,7 +351,7 @@ if (!session?.profile || !isAdmin(session.profile)) {
       document.getElementById('send-modal').classList.remove('hidden')
       document.getElementById('send-modal').classList.add('flex')
     } catch (error) {
-      alert('Erro ao carregar lista de usuários')
+      window.showToast('error', 'Erro ao carregar lista de usuários')
     }
   }
 
@@ -377,22 +374,20 @@ if (!session?.profile || !isAdmin(session.profile)) {
   }
 
   async function deleteNotification(id) {
-    if (!confirm('Tem certeza que deseja remover esta notificação?')) return
+    if (!confirm('Remover esta mensagem?')) return
 
     try {
-      const response = await fetch(`/admin/api/notifications/${id}/delete`, {
-        method: 'DELETE',
-      })
+      const response = await fetch(`/admin/api/notifications/${id}/delete`, { method: 'DELETE' })
 
       if (response.ok) {
-        alert('Notificação removida com sucesso!')
+        window.showToast('success', 'Mensagem removida!')
         loadNotifications()
       } else {
         const data = await response.json()
-        alert(data.error || 'Erro ao remover notificação')
+        window.showToast('error', data.error || 'Erro ao remover')
       }
     } catch (error) {
-      alert('Erro ao remover notificação')
+      window.showToast('error', 'Erro ao remover mensagem')
     }
   }
 
@@ -416,7 +411,7 @@ if (!session?.profile || !isAdmin(session.profile)) {
         const user_ids = Array.from(usersSelect.selectedOptions).map(opt => opt.value)
         
         if (user_ids.length === 0) {
-          alert('Selecione pelo menos um usuário')
+          window.showToast('error', 'Selecione pelo menos um usuário')
           return
         }
 
@@ -432,15 +427,15 @@ if (!session?.profile || !isAdmin(session.profile)) {
 
       if (response.ok) {
         const result = await response.json()
-        alert(result.message)
+        window.showToast('success', result.message)
         closeSendModal()
         loadNotifications()
       } else {
         const errorData = await response.json()
-        alert(errorData.error || 'Erro ao enviar notificação')
+        window.showToast('error', errorData.error || 'Erro ao enviar')
       }
     } catch (error) {
-      alert('Erro ao enviar notificação')
+      window.showToast('error', 'Erro ao enviar mensagem')
     }
   })
 
