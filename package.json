@@ -3,16 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "frontend",
-    "supabase/functions/*"
+    "frontend"
   ],
   "scripts": {
     "dev": "cd frontend && npm run dev",
     "build": "cd frontend && npm run build",
-    "deploy": "cd frontend && npm run deploy",
-    "supabase:start": "cd supabase && supabase start",
-    "supabase:db:push": "cd supabase && supabase db push",
-    "supabase:db:reset": "cd supabase && supabase db reset"
+    "deploy": "cd frontend && npm run deploy"
   },
   "engines": {
     "node": ">=18.0.0"
