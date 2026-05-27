@@ -1,6 +1,8 @@
 node_modules/
 dist/
 .vercel/
+.netlify/
+.astro/
 .env
 *.log
 .DS_Store
