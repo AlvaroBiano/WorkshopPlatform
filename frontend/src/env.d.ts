@@ -24,6 +24,8 @@ declare namespace App {
 }
 
 interface ImportMetaEnv {
+  readonly TURSO_DATABASE_URL: string
+  readonly TURSO_AUTH_TOKEN: string
   readonly PUBLIC_APP_NAME: string
   readonly PUBLIC_APP_SUBTITLE: string
   readonly PUBLIC_SITE_URL: string
