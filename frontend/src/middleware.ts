@@ -1,5 +1,5 @@
 import type { APIContext } from 'astro'
-import { getSessionFromCookies, isAdmin } from './lib/auth'
+import { verifyToken, getUserProfile, isAdmin } from './lib/auth'
 
 const PUBLIC_ROUTES = ['/', '/login', '/cadastro', '/recuperar-senha', '/first-access']
 const ADMIN_ROUTES = ['/admin']
@@ -17,9 +17,9 @@ export async function onRequest(context: APIContext, next: () => Promise<Respons
     return next()
   }
 
-  const session = await getSessionFromCookies(context.cookies)
+  const token = context.cookies.get('sb-access-token')?.value
 
-  if (!session?.profile) {
+  if (!token) {
     if (ADMIN_ROUTES.some(r => pathname.startsWith(r)) ||
         STUDENT_ROUTES.some(r => pathname.startsWith(r)) ||
         AFFILIATE_ROUTES.some(r => pathname.startsWith(r))) {
@@ -28,20 +28,40 @@ export async function onRequest(context: APIContext, next: () => Promise<Respons
     return next()
   }
 
-  if (session.profile.banned_at) {
+  const basicProfile = verifyToken(token)
+  if (!basicProfile) {
+    if (ADMIN_ROUTES.some(r => pathname.startsWith(r)) ||
+        STUDENT_ROUTES.some(r => pathname.startsWith(r)) ||
+        AFFILIATE_ROUTES.some(r => pathname.startsWith(r))) {
+      return context.redirect('/login')
+    }
+    return next()
+  }
+
+  const profile = await getUserProfile(basicProfile.id)
+
+  if (!profile) {
+    if (ADMIN_ROUTES.some(r => pathname.startsWith(r)) ||
+        STUDENT_ROUTES.some(r => pathname.startsWith(r)) ||
+        AFFILIATE_ROUTES.some(r => pathname.startsWith(r))) {
+      return context.redirect('/login')
+    }
+    return next()
+  }
+
+  if (profile.banned_at) {
     return context.redirect('/login?error=banned')
   }
 
-  if (!session.profile.is_active) {
+  if (!profile.is_active) {
     return context.redirect('/login?error=inactive')
   }
 
-  if (ADMIN_ROUTES.some(r => pathname.startsWith(r)) && !isAdmin(session.profile)) {
+  if (ADMIN_ROUTES.some(r => pathname.startsWith(r)) && !isAdmin(profile)) {
     return context.redirect('/student')
   }
 
-  context.locals.user = session.profile
-  context.locals.authUser = session.user
+  context.locals.user = profile
 
   return next()
 }
