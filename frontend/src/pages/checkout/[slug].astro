@@ -43,9 +43,13 @@ const product = productResult.rows[0] as any
             <span class="text-text-muted">Preço</span>
             <span class="text-text-light">R$ {((product.price_cents || 0) / 100).toFixed(2)}</span>
           </div>
-          <div class="flex justify-between text-lg font-bold">
+          <div id="discount-row" class="flex justify-between hidden">
+            <span class="text-text-muted">Desconto</span>
+            <span id="discount-value" class="text-verde-claro">-R$ 0.00</span>
+          </div>
+          <div class="flex justify-between text-lg font-bold border-t border-white/10 pt-4">
             <span class="text-dourado">Total</span>
-            <span class="text-dourado">R$ {((product.price_cents || 0) / 100).toFixed(2)}</span>
+            <span id="total-value" class="text-dourado">R$ {((product.price_cents || 0) / 100).toFixed(2)}</span>
           </div>
         </div>
         
@@ -105,21 +109,27 @@ const product = productResult.rows[0] as any
     const code = document.getElementById('coupon-code').value.trim().toUpperCase()
     const msg = document.getElementById('coupon-message')
     msg.classList.remove('hidden', 'text-verde-claro', 'text-vermelho')
-    
+    const discountRow = document.getElementById('discount-row')
+    const discountValue = document.getElementById('discount-value')
+    const totalValue = document.getElementById('total-value')
+
     if (!code) return
-    
+
     try {
       const res = await fetch('/api/validate-coupon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, product_id: productId }),
+        body: JSON.stringify({ code, product_id: productId, amount_cents: priceCents }),
       })
       const data = await res.json()
-      
+
       if (res.ok && data.valid) {
         appliedCoupon = data.coupon
         currentPrice = data.final_price_cents
-        msg.textContent = `Cupom aplicado! Desconto: R$ ${(data.discount_cents / 100).toFixed(2)}`
+        discountRow.classList.remove('hidden')
+        discountValue.textContent = `-R$ ${(data.discount_cents / 100).toFixed(2)}`
+        totalValue.textContent = `R$ ${(data.final_price_cents / 100).toFixed(2)}`
+        msg.textContent = `Cupom ${data.coupon.code} aplicado!`
         msg.classList.add('text-verde-claro')
         msg.classList.remove('hidden')
       } else {
