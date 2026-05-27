@@ -3,7 +3,7 @@ import { db } from '../../lib/turso'
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const { code, product_id } = await request.json()
+    const { code, product_id, amount_cents } = await request.json()
 
     if (!code) {
       return new Response(JSON.stringify({ error: 'Código é obrigatório' }), { status: 400 })
@@ -25,6 +25,14 @@ export const POST: APIRoute = async ({ request }) => {
 
     const coupon = result.rows[0] as any
 
+    let discountCents = 0
+    if (coupon.discount_type === 'percentage') {
+      discountCents = Math.round((amount_cents * coupon.discount_value) / 100)
+    } else {
+      discountCents = coupon.discount_value
+    }
+    const finalPrice = Math.max(0, amount_cents - discountCents)
+
     return new Response(JSON.stringify({
       valid: true,
       coupon: {
@@ -33,6 +41,8 @@ export const POST: APIRoute = async ({ request }) => {
         discount_type: coupon.discount_type,
         discount_value: coupon.discount_value,
       },
+      discount_cents: discountCents,
+      final_price_cents: finalPrice,
     }), { headers: { 'Content-Type': 'application/json' } })
   } catch (error) {
     return new Response(JSON.stringify({ error: 'Erro ao validar cupom' }), { status: 500 })

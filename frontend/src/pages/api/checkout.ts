@@ -64,9 +64,9 @@ export const POST: APIRoute = async ({ request }) => {
     const orderNumber = `WB-${Date.now()}`
 
     await db.execute({
-      sql: `INSERT INTO orders (id, order_number, user_id, product_id, amount_cents, status, created_at)
-            VALUES (?, ?, ?, ?, ?, 'pending', datetime('now'))`,
-      args: [orderId, orderNumber, userId, product_id, finalPrice],
+      sql: `INSERT INTO orders (id, order_number, user_id, product_id, amount_cents, coupon_id, discount_cents, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'))`,
+      args: [orderId, orderNumber, userId, product_id, finalPrice, couponId, discountCents],
     })
 
     if (couponId) {
