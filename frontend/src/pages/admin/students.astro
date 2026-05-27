@@ -583,5 +583,15 @@ if (!session?.profile || !isAdmin(session.profile)) {
     loadStudents()
   })
 
+  // Expor funções para escopo global (onclick inline)
+  window.openCreateModal = openCreateModal
+  window.openEditModal = openEditModal
+  window.closeModal = closeModal
+  window.openBanModal = openBanModal
+  window.closeBanModal = closeBanModal
+  window.unbanStudent = unbanStudent
+  window.deleteStudent = deleteStudent
+  window.goToPage = goToPage
+
   loadStudents()
 </script>

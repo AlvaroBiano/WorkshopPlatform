@@ -444,5 +444,12 @@ if (!session?.profile || !isAdmin(session.profile)) {
     }
   })
 
+  // Expor funções para escopo global (onclick inline)
+  window.openSendModal = openSendModal
+  window.closeSendModal = closeSendModal
+  window.toggleRecipientType = toggleRecipientType
+  window.deleteNotification = deleteNotification
+  window.goToPage = goToPage
+
   loadNotifications()
 </script>

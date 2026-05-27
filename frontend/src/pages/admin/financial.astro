@@ -490,6 +490,15 @@ if (!session?.profile || !isAdmin(session.profile)) {
     }
   })
 
+  // Expor funções para escopo global (onclick inline)
+  window.loadOrders = loadOrders
+  window.goToPage = goToPage
+  window.openOrderModal = openOrderModal
+  window.closeOrderModal = closeOrderModal
+  window.approveOrder = approveOrder
+  window.openRejectModal = openRejectModal
+  window.closeRejectModal = closeRejectModal
+
   loadOverview()
   loadOrders()
 </script>

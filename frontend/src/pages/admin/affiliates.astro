@@ -601,5 +601,15 @@ if (!session?.profile || !isAdmin(session.profile)) {
 
   document.getElementById('status-filter').addEventListener('change', loadAffiliates)
 
+  // Expor funções para escopo global (onclick inline)
+  window.loadAffiliates = loadAffiliates
+  window.goToPage = goToPage
+  window.openCreateModal = openCreateModal
+  window.closeAffiliateModal = closeAffiliateModal
+  window.openDetailsModal = openDetailsModal
+  window.closeDetailsModal = closeDetailsModal
+  window.switchTab = switchTab
+  window.deactivateAffiliate = deactivateAffiliate
+
   loadAffiliates()
 </script>
