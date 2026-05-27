@@ -1,0 +1,623 @@
+---
+import Layout from '../layouts/Layout.astro'
+---
+
+<Layout title="Workshop Mentalidade Financeira | Álvaro Biano">
+  <div class="relative overflow-hidden">
+    <!-- Animated Background -->
+    <div class="absolute inset-0 bg-gradient-to-br from-azul-profundo via-bg-dark to-verde-principal opacity-90"></div>
+    <div class="absolute inset-0">
+      <div class="absolute top-0 left-1/4 w-96 h-96 bg-dourado/10 rounded-full blur-3xl animate-pulse-slow"></div>
+      <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-verde-principal/10 rounded-full blur-3xl animate-pulse-slow animation-delay-2000"></div>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="relative min-h-screen flex items-center justify-center px-4 py-20">
+      <div class="max-w-6xl mx-auto text-center relative z-10">
+        <div class="animate-fade-in-up">
+          <span class="inline-block px-6 py-2 bg-dourado/20 border border-dourado/40 rounded-full text-dourado text-sm font-semibold mb-6 backdrop-blur-sm">
+            WORKSHOP EXCLUSIVO
+          </span>
+        </div>
+
+        <h1 class="font-display text-5xl md:text-7xl lg:text-8xl text-dourado mb-6 animate-fade-in-up animation-delay-200">
+          Mentalidade<br />Financeira
+        </h1>
+
+        <p class="text-xl md:text-2xl text-text-light mb-4 animate-fade-in-up animation-delay-400">
+          com <span class="text-dourado font-semibold">Álvaro Biano</span>
+        </p>
+
+        <p class="text-lg md:text-xl text-text-muted max-w-3xl mx-auto mb-12 animate-fade-in-up animation-delay-600">
+          Descubra por que <span class="text-dourado font-semibold">15 estudos científicos</span> provam que seu bloqueio financeiro 
+          <span class="underline decoration-dourado decoration-2">não tem nada a ver</span> com falta de conhecimento técnico
+        </p>
+
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-800">
+          <a href="#inscricao" class="btn btn-primary text-lg px-10 py-5 group">
+            <span>Quero Desbloquear Minha Mente</span>
+            <svg class="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </a>
+          <a href="#conteudo" class="btn btn-secondary text-lg px-10 py-5">
+            Ver Conteúdo
+          </a>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20 animate-fade-in-up animation-delay-1000">
+          <div class="text-center">
+            <div class="text-4xl md:text-5xl font-display text-dourado mb-2">5h41</div>
+            <div class="text-sm text-text-muted">de Conteúdo</div>
+          </div>
+          <div class="text-center">
+            <div class="text-4xl md:text-5xl font-display text-dourado mb-2">15</div>
+            <div class="text-sm text-text-muted">Estudos Científicos</div>
+          </div>
+          <div class="text-center">
+            <div class="text-4xl md:text-5xl font-display text-dourado mb-2">4</div>
+            <div class="text-sm text-text-muted">Arquétipos Financeiros</div>
+          </div>
+          <div class="text-center">
+            <div class="text-4xl md:text-5xl font-display text-dourado mb-2">∞</div>
+            <div class="text-sm text-text-muted">Transformações</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Problem Section -->
+    <section class="relative py-20 px-4 bg-bg-card">
+      <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-16 scroll-reveal">
+          <h2 class="font-display text-4xl md:text-5xl text-dourado mb-6">
+            Você Já Se Perguntou...
+          </h2>
+          <p class="text-xl text-text-muted max-w-3xl mx-auto">
+            Por que mesmo trabalhando duro, o dinheiro parece escorrer pelas mãos?
+          </p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-8 mb-16">
+          <div class="card p-8 scroll-reveal">
+            <div class="text-4xl mb-4">🧠</div>
+            <h3 class="text-2xl font-display text-dourado mb-4">Perda de QI sob Estresse</h3>
+            <p class="text-text-muted leading-relaxed">
+              Estudos comprovam: sob estresse financeiro, você pode perder até 
+              <span class="text-dourado font-bold text-xl">13 pontos de QI</span> temporariamente. 
+              É como se seu cérebro entrasse em modo de sobrevivência e desligasse sua capacidade de pensar estrategicamente.
+            </p>
+          </div>
+
+          <div class="card p-8 scroll-reveal">
+            <div class="text-4xl mb-4">🔄</div>
+            <h3 class="text-2xl font-display text-dourado mb-4">O Ciclo Vicioso</h3>
+            <p class="text-text-muted leading-relaxed">
+              Quanto mais estresse financeiro, piores decisões você toma. 
+              Quanto piores as decisões, mais estresse financeiro. 
+              <span class="text-dourado font-semibold">A ciência chama isso de "tunelamento cognitivo"</span> - e você nem percebe que está preso nele.
+            </p>
+          </div>
+        </div>
+
+        <div class="card p-8 md:p-12 bg-gradient-to-br from-verde-principal/20 to-azul-profundo/20 border-dourado/30 scroll-reveal">
+          <div class="flex flex-col md:flex-row items-center gap-8">
+            <div class="flex-shrink-0">
+              <div class="w-24 h-24 bg-dourado/20 rounded-full flex items-center justify-center">
+                <svg class="w-12 h-12 text-dourado" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+            </div>
+            <div>
+              <h3 class="text-2xl md:text-3xl font-display text-dourado mb-4">
+                A Verdade Que Ninguém Te Conta
+              </h3>
+              <p class="text-lg text-text-light leading-relaxed">
+                Seu bloqueio financeiro <span class="text-dourado font-bold">não é sobre dinheiro</span>. 
+                É sobre as crenças que foram instaladas na sua mente desde a infância. 
+                E a ciência já provou: <span class="underline decoration-dourado decoration-2">essas crenças podem ser reprogramadas</span>.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Solution Section -->
+    <section id="conteudo" class="relative py-20 px-4">
+      <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-16 scroll-reveal">
+          <h2 class="font-display text-4xl md:text-5xl text-dourado mb-6">
+            O Que Você Vai Descobrir
+          </h2>
+          <p class="text-xl text-text-muted max-w-3xl mx-auto">
+            Um mergulho profundo na psicologia do dinheiro baseado em ciência, não em achismo
+          </p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-8 mb-16">
+          <div class="card p-8 hover-lift scroll-reveal">
+            <div class="w-16 h-16 bg-dourado/20 rounded-lg flex items-center justify-center mb-6">
+              <svg class="w-8 h-8 text-dourado" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <h3 class="text-xl font-display text-dourado mb-3">Os 4 Arquétipos Financeiros</h3>
+            <p class="text-text-muted">
+              Descubra qual padrão inconsciente está sabotando sua relação com o dinheiro e como quebrá-lo definitivamente.
+            </p>
+          </div>
+
+          <div class="card p-8 hover-lift scroll-reveal">
+            <div class="w-16 h-16 bg-dourado/20 rounded-lg flex items-center justify-center mb-6">
+              <svg class="w-8 h-8 text-dourado" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </div>
+            <h3 class="text-xl font-display text-dourado mb-3">Scripts da Infância</h3>
+            <p class="text-text-muted">
+              Identifique as crenças limitantes instaladas na sua mente e aprenda o método científico para reprogramá-las.
+            </p>
+          </div>
+
+          <div class="card p-8 hover-lift scroll-reveal">
+            <div class="w-16 h-16 bg-dourado/20 rounded-lg flex items-center justify-center mb-6">
+              <svg class="w-8 h-8 text-dourado" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+            </div>
+            <h3 class="text-xl font-display text-dourado mb-3">Filtro Mental Socrático</h3>
+            <p class="text-text-muted">
+              Aprenda as 3 perguntas que vão blindar sua mente contra crenças tóxicas e decisões financeiras impulsivas.
+            </p>
+          </div>
+
+          <div class="card p-8 hover-lift scroll-reveal">
+            <div class="w-16 h-16 bg-dourado/20 rounded-lg flex items-center justify-center mb-6">
+              <svg class="w-8 h-8 text-dourado" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+            </div>
+            <h3 class="text-xl font-display text-dourado mb-3">Preço vs. Valor</h3>
+            <p class="text-text-muted">
+              A diferença crucial que vai transformar como você cobra pelo seu trabalho e como as pessoas te valorizam.
+            </p>
+          </div>
+
+          <div class="card p-8 hover-lift scroll-reveal">
+            <div class="w-16 h-16 bg-dourado/20 rounded-lg flex items-center justify-center mb-6">
+              <svg class="w-8 h-8 text-dourado" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </div>
+            <h3 class="text-xl font-display text-dourado mb-3">Saúde e Finanças</h3>
+            <p class="text-text-muted">
+              Como o estresse financeiro causa doenças reais (cardíacas, diabetes, fibromialgia) e o que fazer para proteger sua saúde.
+            </p>
+          </div>
+
+          <div class="card p-8 hover-lift scroll-reveal">
+            <div class="w-16 h-16 bg-dourado/20 rounded-lg flex items-center justify-center mb-6">
+              <svg class="w-8 h-8 text-dourado" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 class="text-xl font-display text-dourado mb-3">Construir vs. Ganhar</h3>
+            <p class="text-text-muted">
+              Por que a palavra "ganhar" está destruindo sua prosperidade e qual termo usar para ativar sua mente de abundância.
+            </p>
+          </div>
+        </div>
+
+        <div class="text-center scroll-reveal">
+          <div class="inline-block card p-8 bg-gradient-to-br from-dourado/10 to-dourado/5 border-dourado/30">
+            <p class="text-xl text-text-light mb-2">
+              <span class="text-dourado font-bold">Bônus:</span> Teste completo de diagnóstico dos seus scripts financeiros
+            </p>
+            <p class="text-text-muted">
+              Descubra em 15 minutos qual padrão está te impedindo de prosperar
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Authority Section -->
+    <section class="relative py-20 px-4 bg-bg-card">
+      <div class="max-w-6xl mx-auto">
+        <div class="grid md:grid-cols-2 gap-12 items-center">
+          <div class="scroll-reveal">
+            <div class="relative">
+              <div class="absolute inset-0 bg-gradient-to-br from-dourado/20 to-verde-principal/20 rounded-2xl blur-2xl"></div>
+              <div class="relative card p-8">
+                <div class="aspect-square bg-gradient-to-br from-azul-profundo to-verde-principal rounded-xl flex items-center justify-center mb-6">
+                  <div class="text-center">
+                    <div class="text-6xl mb-4">👨‍⚕️</div>
+                    <p class="text-dourado font-display text-2xl">Álvaro Biano</p>
+                  </div>
+                </div>
+                <div class="space-y-3">
+                  <div class="flex items-center gap-3">
+                    <svg class="w-5 h-5 text-dourado flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="text-text-light">Psicoterapeuta</span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <svg class="w-5 h-5 text-dourado flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="text-text-light">Psicossomatologista</span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <svg class="w-5 h-5 text-dourado flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="text-text-light">Formador de Profissionais</span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <svg class="w-5 h-5 text-dourado flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="text-text-light">Especialista em Neurolinguística</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="scroll-reveal">
+            <h2 class="font-display text-4xl md:text-5xl text-dourado mb-6">
+              Quem Vai Te Guiar
+            </h2>
+            <p class="text-lg text-text-muted mb-6 leading-relaxed">
+              Álvaro Biano não é mais um "guru financeiro" vendendo fórmulas mágicas. 
+              É um <span class="text-dourado font-semibold">profissional da saúde mental</span> que sentiu na pele 
+              o que é conviver com pessoas tóxico-abusivas que destroem sua relação com o dinheiro.
+            </p>
+            <p class="text-lg text-text-muted mb-6 leading-relaxed">
+              Sua abordagem é única: <span class="text-dourado font-semibold">ciência + psicologia + espiritualidade</span>. 
+              Sem promessas vazias, apenas métodos comprovados por estudos publicados nas revistas científicas mais prestigiadas do mundo.
+            </p>
+            <div class="card p-6 bg-gradient-to-br from-verde-principal/10 to-azul-profundo/10 border-dourado/20">
+              <p class="text-text-light italic">
+                "O bloqueio financeiro transcende a ausência de competência técnica. 
+                É governado por uma infraestrutura biopsicológica baseada no que assumimos ser verdade sobre o dinheiro."
+              </p>
+              <p class="text-dourado font-semibold mt-4">— Álvaro Biano</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section id="inscricao" class="relative py-20 px-4">
+      <div class="absolute inset-0 bg-gradient-to-br from-verde-principal/30 via-bg-dark to-azul-profundo/30"></div>
+      
+      <div class="max-w-4xl mx-auto relative z-10">
+        <div class="card p-8 md:p-12 bg-gradient-to-br from-bg-card to-bg-dark border-dourado/30 scroll-reveal">
+          <div class="text-center mb-12">
+            <h2 class="font-display text-4xl md:text-5xl text-dourado mb-6">
+              Pronto Para Quebrar o Ciclo?
+            </h2>
+            <p class="text-xl text-text-muted mb-8">
+              Acesso imediato a <span class="text-dourado font-semibold">5h41 de conteúdo transformador</span> 
+              baseado em ciência real
+            </p>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-8 mb-12">
+            <div>
+              <h3 class="text-2xl font-display text-dourado mb-4">O Que Está Incluído:</h3>
+              <ul class="space-y-3">
+                <li class="flex items-start gap-3">
+                  <svg class="w-6 h-6 text-dourado flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  </svg>
+                  <span class="text-text-light">Workshop completo (5h41min)</span>
+                </li>
+                <li class="flex items-start gap-3">
+                  <svg class="w-6 h-6 text-dourado flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  </svg>
+                  <span class="text-text-light">Apostila com 15 estudos científicos</span>
+                </li>
+                <li class="flex items-start gap-3">
+                  <svg class="w-6 h-6 text-dourado flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  </svg>
+                  <span class="text-text-light">Teste de diagnóstico dos 4 arquétipos</span>
+                </li>
+                <li class="flex items-start gap-3">
+                  <svg class="w-6 h-6 text-dourado flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  </svg>
+                  <span class="text-text-light">Teste completo de scripts financeiros</span>
+                </li>
+                <li class="flex items-start gap-3">
+                  <svg class="w-6 h-6 text-dourado flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  </svg>
+                  <span class="text-text-light">Acesso vitalício ao conteúdo</span>
+                </li>
+                <li class="flex items-start gap-3">
+                  <svg class="w-6 h-6 text-dourado flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  </svg>
+                  <span class="text-text-light">Grupo exclusivo de alunos</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="flex flex-col justify-center">
+              <div class="text-center mb-8">
+                <div class="text-text-muted text-lg mb-2">De <span class="line-through">R$ 997</span> por apenas</div>
+                <div class="flex items-baseline justify-center gap-2">
+                  <span class="text-6xl md:text-7xl font-display text-dourado">R$ 397</span>
+                </div>
+                <div class="text-text-muted mt-2">ou 12x de R$ 39,70</div>
+              </div>
+
+              <a href="/cadastro" class="btn btn-primary text-xl py-6 w-full group">
+                <span>Quero Transformar Minha Mentalidade</span>
+                <svg class="w-6 h-6 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </a>
+
+              <div class="flex items-center justify-center gap-2 mt-6 text-text-muted text-sm">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                </svg>
+                <span>Pagamento 100% seguro</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="border-t border-white/10 pt-8">
+            <div class="flex flex-col md:flex-row items-center justify-center gap-6 text-center">
+              <div class="flex items-center gap-2">
+                <svg class="w-6 h-6 text-dourado" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <span class="text-text-light">Garantia de 7 dias</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <svg class="w-6 h-6 text-dourado" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <span class="text-text-light">Acesso imediato</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <svg class="w-6 h-6 text-dourado" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <span class="text-text-light">Suporte dedicado</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="relative py-20 px-4 bg-bg-card">
+      <div class="max-w-4xl mx-auto">
+        <div class="text-center mb-16 scroll-reveal">
+          <h2 class="font-display text-4xl md:text-5xl text-dourado mb-6">
+            Perguntas Frequentes
+          </h2>
+        </div>
+
+        <div class="space-y-4">
+          <details class="card p-6 group scroll-reveal">
+            <summary class="flex items-center justify-between cursor-pointer">
+              <h3 class="text-xl font-display text-dourado">Para quem é este workshop?</h3>
+              <svg class="w-6 h-6 text-dourado transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </summary>
+            <p class="text-text-muted mt-4 leading-relaxed">
+              Para qualquer pessoa que sente que tem um "bloqueio" com dinheiro - seja dificuldade de cobrar pelo seu trabalho, 
+              impulsividade nos gastos, medo de investir, ou sensação constante de escassez. Não importa sua renda atual, 
+              o problema está na sua relação psicológica com o dinheiro.
+            </p>
+          </details>
+
+          <details class="card p-6 group scroll-reveal">
+            <summary class="flex items-center justify-between cursor-pointer">
+              <h3 class="text-xl font-display text-dourado">Preciso ter conhecimento prévio em finanças?</h3>
+              <svg class="w-6 h-6 text-dourado transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </summary>
+            <p class="text-text-muted mt-4 leading-relaxed">
+              Absolutamente não. Na verdade, a ciência prova que conhecimento técnico é apenas a ponta do iceberg. 
+              Este workshop trabalha a raiz do problema: suas crenças e padrões emocionais instalados desde a infância.
+            </p>
+          </details>
+
+          <details class="card p-6 group scroll-reveal">
+            <summary class="flex items-center justify-between cursor-pointer">
+              <h3 class="text-xl font-display text-dourado">Quanto tempo tenho para assistir?</h3>
+              <svg class="w-6 h-6 text-dourado transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </summary>
+            <p class="text-text-muted mt-4 leading-relaxed">
+              Acesso vitalício. Assista no seu ritmo, quantas vezes quiser. O conteúdo está disponível 24/7 na plataforma.
+            </p>
+          </details>
+
+          <details class="card p-6 group scroll-reveal">
+            <summary class="flex items-center justify-between cursor-pointer">
+              <h3 class="text-xl font-display text-dourado">E se eu não gostar?</h3>
+              <svg class="w-6 h-6 text-dourado transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </summary>
+            <p class="text-text-muted mt-4 leading-relaxed">
+              Você tem 7 dias de garantia incondicional. Se por qualquer motivo sentir que não é para você, 
+              devolvemos 100% do seu investimento. Sem perguntas, sem burocracia.
+            </p>
+          </details>
+
+          <details class="card p-6 group scroll-reveal">
+            <summary class="flex items-center justify-between cursor-pointer">
+              <h3 class="text-xl font-display text-dourado">Isso substitui terapia?</h3>
+              <svg class="w-6 h-6 text-dourado transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </summary>
+            <p class="text-text-muted mt-4 leading-relaxed">
+              Não. Este é um workshop educacional baseado em ciência. Se você tem questões profundas ou traumas, 
+              recomendamos acompanhamento terapêutico individual. Este workshop é um excelente complemento à terapia.
+            </p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="relative py-20 px-4">
+      <div class="max-w-4xl mx-auto text-center scroll-reveal">
+        <h2 class="font-display text-4xl md:text-5xl text-dourado mb-6">
+          Sua Transformação Começa Agora
+        </h2>
+        <p class="text-xl text-text-muted mb-8 max-w-2xl mx-auto">
+          Pare de viver no ciclo de escassez. Descubra o que a ciência já provou sobre desbloqueio financeiro 
+          e comece a construir a prosperidade que você merece.
+        </p>
+        <a href="#inscricao" class="btn btn-primary text-xl px-12 py-6 inline-flex items-center gap-2 group">
+          <span>Quero Começar Minha Jornada</span>
+          <svg class="w-6 h-6 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+          </svg>
+        </a>
+      </div>
+    </section>
+  </div>
+</Layout>
+
+<style>
+  @keyframes pulse-slow {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.1); }
+  }
+
+  .animate-pulse-slow {
+    animation: pulse-slow 8s ease-in-out infinite;
+  }
+
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .animation-delay-400 {
+    animation-delay: 400ms;
+  }
+
+  .animation-delay-600 {
+    animation-delay: 600ms;
+  }
+
+  .animation-delay-800 {
+    animation-delay: 800ms;
+  }
+
+  .animation-delay-1000 {
+    animation-delay: 1000ms;
+  }
+
+  .animation-delay-2000 {
+    animation-delay: 2000ms;
+  }
+
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.8s ease-out forwards;
+    opacity: 0;
+  }
+
+  .hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(212, 175, 55, 0.2);
+  }
+
+  details[open] summary ~ * {
+    animation: slide-down 0.3s ease-out;
+  }
+
+  @keyframes slide-down {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .scroll-reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  }
+
+  .scroll-reveal.revealed {
+    opacity: 1;
+    transform: translateY(0);
+  }
+</style>
+
+<script>
+  // Scroll reveal animation
+  const observerOptions = {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+  };
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('revealed');
+      }
+    });
+  }, observerOptions);
+
+  document.querySelectorAll('.scroll-reveal').forEach(el => {
+    observer.observe(el);
+  });
+
+  // Smooth scroll for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        target.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
+    });
+  });
+</script>

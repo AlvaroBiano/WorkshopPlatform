@@ -1,0 +1,127 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro'
+import { supabaseAdmin } from '../../lib/supabase-server'
+
+const { data: recentNotifications } = await supabaseAdmin
+  .from('notifications')
+  .select('*, user:users(full_name, email)')
+  .order('created_at', { ascending: false })
+  .limit(50)
+---
+
+<AdminLayout title="Mensagens">
+  <h1 class="text-2xl font-display font-bold text-dourado mb-6">Mensagens</h1>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <div class="card p-6">
+      <h2 class="font-bold text-dourado mb-4">Enviar Notificação</h2>
+      <form id="notifForm" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-text-muted mb-2">Destinatário</label>
+          <select id="recipient" class="input">
+            <option value="all">Todos os alunos</option>
+            <option value="specific">Aluno específico</option>
+          </select>
+        </div>
+        <div id="specificUser" class="hidden">
+          <label class="block text-sm font-medium text-text-muted mb-2">E-mail do aluno</label>
+          <input type="email" id="user_email" class="input" placeholder="aluno@email.com" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-text-muted mb-2">Título</label>
+          <input type="text" id="title" class="input" required />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-text-muted mb-2">Mensagem</label>
+          <textarea id="body" class="input" rows="4" required></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-text-muted mb-2">Link (opcional)</label>
+          <input type="url" id="link_url" class="input" placeholder="/student" />
+        </div>
+        <div id="errorMsg" class="hidden p-3 rounded-lg text-sm bg-red-500/10 border border-red-500/30 text-red-400"></div>
+        <div id="successMsg" class="hidden p-3 rounded-lg text-sm bg-verde-claro/10 border border-verde-claro/30 text-verde-claro"></div>
+        <button type="submit" class="btn btn-primary w-full">Enviar Notificação</button>
+      </form>
+    </div>
+
+    <div class="card p-6">
+      <h2 class="font-bold text-dourado mb-4">Estatísticas</h2>
+      <div class="space-y-3">
+        <div class="flex justify-between">
+          <span class="text-text-muted">Total de notificações enviadas</span>
+          <span class="font-semibold text-dourado">{recentNotifications?.length || 0}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-text-muted">Última notificação</span>
+          <span class="font-semibold text-dourado">
+            {recentNotifications?.[0] ? new Date(recentNotifications[0].created_at).toLocaleDateString('pt-BR') : '—'}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card p-6">
+    <h2 class="font-bold text-dourado mb-4">Notificações Recentes</h2>
+    <div class="space-y-3">
+      {(recentNotifications || []).map((n: any) => (
+        <div class="p-4 bg-white/5 rounded-lg">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <p class="font-semibold">{n.title}</p>
+              <p class="text-xs text-text-muted">{n.user?.full_name} · {n.user?.email}</p>
+            </div>
+            <span class="text-xs text-text-muted">{new Date(n.created_at).toLocaleString('pt-BR')}</span>
+          </div>
+          <p class="text-sm text-text-muted">{n.body}</p>
+        </div>
+      ))}
+      {(!recentNotifications || recentNotifications.length === 0) && (
+        <p class="text-text-muted text-center py-8">Nenhuma notificação enviada</p>
+      )}
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  const form = document.getElementById('notifForm') as HTMLFormElement
+  const recipientSelect = document.getElementById('recipient') as HTMLSelectElement
+  const specificUserDiv = document.getElementById('specificUser') as HTMLDivElement
+  const errorMsg = document.getElementById('errorMsg') as HTMLDivElement
+  const successMsg = document.getElementById('successMsg') as HTMLDivElement
+
+  recipientSelect.addEventListener('change', () => {
+    specificUserDiv.classList.toggle('hidden', recipientSelect.value !== 'specific')
+  })
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    errorMsg.classList.add('hidden')
+    successMsg.classList.add('hidden')
+
+    const data = {
+      recipient: recipientSelect.value,
+      user_email: recipientSelect.value === 'specific' ? (document.getElementById('user_email') as HTMLInputElement).value : null,
+      title: (document.getElementById('title') as HTMLInputElement).value,
+      body: (document.getElementById('body') as HTMLTextAreaElement).value,
+      link_url: (document.getElementById('link_url') as HTMLInputElement).value || null,
+    }
+
+    const res = await fetch('/admin/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+
+    if (res.ok) {
+      successMsg.textContent = 'Notificação enviada com sucesso!'
+      successMsg.classList.remove('hidden')
+      form.reset()
+      setTimeout(() => successMsg.classList.add('hidden'), 3000)
+    } else {
+      errorMsg.textContent = 'Erro: ' + await res.text()
+      errorMsg.classList.remove('hidden')
+    }
+  })
+</script>

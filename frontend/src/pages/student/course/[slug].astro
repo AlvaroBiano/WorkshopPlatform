@@ -1,0 +1,225 @@
+---
+import StudentLayout from '../../../layouts/StudentLayout.astro'
+import { supabaseAdmin } from '../../../lib/supabase-server'
+
+const user = Astro.locals.user
+if (!user) return Astro.redirect('/login')
+
+const slug = Astro.params.slug
+const requestedLessonId = Astro.url.searchParams.get('lesson')
+
+const { data: product } = await supabaseAdmin
+  .from('products')
+  .select(`
+    *,
+    modules(
+      id, title, sort_order,
+      lessons(id, title, sort_order, type, vimeo_id, youtube_url, file_url, duration_sec, description, is_free)
+    )
+  `)
+  .eq('slug', slug)
+  .single()
+
+if (!product) return new Response('Não encontrado', { status: 404 })
+
+const { data: access } = await supabaseAdmin
+  .from('product_access')
+  .select('*')
+  .eq('user_id', user.id)
+  .eq('product_id', product.id)
+  .single()
+
+if (!access) return Astro.redirect('/student?error=no_access')
+
+const { data: progress } = await supabaseAdmin
+  .from('progress')
+  .select('*')
+  .eq('user_id', user.id)
+
+const progressMap = Object.fromEntries(
+  (progress || []).map((p: any) => [p.lesson_id, p])
+)
+
+const allLessons = (product.modules || [])
+  .sort((a: any, b: any) => a.sort_order - b.sort_order)
+  .flatMap((m: any) =>
+    m.lessons
+      .sort((a: any, b: any) => a.sort_order - b.sort_order)
+      .map((l: any) => ({ ...l, moduleTitle: m.title, moduleId: m.id }))
+  )
+
+let currentLesson = requestedLessonId
+  ? allLessons.find((l: any) => l.id === requestedLessonId)
+  : allLessons.find((l: any) => !progressMap[l.id]?.completed) || allLessons[0]
+
+if (!currentLesson) currentLesson = allLessons[0]
+
+const completedCount = allLessons.filter((l: any) => progressMap[l.id]?.completed).length
+const totalCount = allLessons.length
+---
+
+<StudentLayout title={`${currentLesson.title} | WORKSHOP`}>
+  <div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+    <div>
+      <div class="aspect-video bg-black rounded-xl overflow-hidden mb-4">
+        {currentLesson.type === 'vimeo' && currentLesson.vimeo_id ? (
+          <iframe
+            src={`https://player.vimeo.com/video/${currentLesson.vimeo_id}?autoplay=1`}
+            class="w-full h-full"
+            frameborder="0"
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowfullscreen
+          ></iframe>
+        ) : currentLesson.type === 'youtube' && currentLesson.youtube_url ? (
+          <iframe
+            src={`https://www.youtube.com/embed/${new URL(currentLesson.youtube_url).searchParams.get('v')}?autoplay=1`}
+            class="w-full h-full"
+            frameborder="0"
+            allow="autoplay; fullscreen"
+            allowfullscreen
+          ></iframe>
+        ) : currentLesson.type === 'pdf' && currentLesson.file_url ? (
+          <iframe src={currentLesson.file_url} class="w-full h-full"></iframe>
+        ) : (
+          <div class="w-full h-full flex items-center justify-center text-text-muted">
+            <p>Conteúdo: {currentLesson.type}</p>
+          </div>
+        )}
+      </div>
+
+      <div class="card p-6">
+        <h1 class="text-2xl font-display font-bold text-dourado mb-2">{currentLesson.title}</h1>
+        {currentLesson.description && (
+          <p class="text-text-muted mb-4">{currentLesson.description}</p>
+        )}
+        <div class="flex flex-wrap gap-3">
+          <button id="markComplete" class="btn btn-primary">
+            {progressMap[currentLesson.id]?.completed ? '✓ Concluída' : '✓ Marcar como concluída'}
+          </button>
+          {currentLesson.file_url && (
+            <a href={currentLesson.file_url} target="_blank" class="btn btn-secondary">
+              Baixar Material
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+
+    <aside class="card max-h-[calc(100vh-120px)] overflow-y-auto">
+      <div class="p-4 border-b border-white/5 sticky top-0 bg-bg-card z-10">
+        <h2 class="font-bold text-dourado">{product.title}</h2>
+        <p class="text-xs text-text-muted mt-1">
+          {completedCount} de {totalCount} aulas concluídas
+        </p>
+        <div class="h-1.5 bg-white/10 rounded mt-2 overflow-hidden">
+          <div
+            class="h-full bg-gradient-to-r from-verde-principal to-verde-claro"
+            style={`width: ${totalCount ? Math.round((completedCount / totalCount) * 100) : 0}%`}
+          ></div>
+        </div>
+      </div>
+
+      {(product.modules || []).sort((a: any, b: any) => a.sort_order - b.sort_order).map((m: any, mi: number) => (
+        <div>
+          <div class="px-4 py-3 bg-white/5 sticky top-[89px]">
+            <h3 class="font-semibold text-sm">
+              <span class="text-dourado">M{mi + 1}</span> · {m.title}
+            </h3>
+          </div>
+          {m.lessons.sort((a: any, b: any) => a.sort_order - b.sort_order).map((l: any, li: number) => {
+            const prog = progressMap[l.id]
+            const isCurrent = l.id === currentLesson.id
+            return (
+              <a
+                href={`/student/course/${slug}?lesson=${l.id}`}
+                class:list={[
+                  'flex items-start gap-3 px-4 py-3 border-l-2 hover:bg-white/5 transition-colors',
+                  isCurrent ? 'border-l-dourado bg-white/5' : 'border-l-transparent'
+                ]}
+              >
+                <div class:list={[
+                  'flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold',
+                  prog?.completed ? 'bg-verde-claro text-white' :
+                  isCurrent ? 'bg-dourado text-azul-profundo' :
+                  'bg-white/10 text-text-muted'
+                ]}>
+                  {prog?.completed ? '✓' : li + 1}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class:list={['text-sm', isCurrent ? 'text-dourado font-semibold' : '']}>
+                    {l.title}
+                  </p>
+                  <p class="text-xs text-text-muted mt-0.5">
+                    {Math.floor((l.duration_sec || 0) / 60)} min
+                    {prog?.watched_sec > 0 && !prog.completed && (
+                      <span class="ml-2 text-dourado">
+                        · {Math.floor(prog.watched_sec / 60)}min assistidos
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </a>
+            )
+          })}
+        </div>
+      ))}
+    </aside>
+  </div>
+</StudentLayout>
+
+<script define:vars={{ lessonId: currentLesson?.id, userId: user?.id, slug }}>
+  let watchedSec = 0
+  let startTime = Date.now()
+
+  setInterval(() => {
+    watchedSec = Math.floor((Date.now() - startTime) / 1000)
+    fetch('/student/api/progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        lessonId,
+        watchedSec,
+        lastPositionSec: watchedSec,
+      }),
+    }).catch(() => {})
+  }, 15000)
+
+  document.getElementById('markComplete')?.addEventListener('click', async () => {
+    const btn = document.getElementById('markComplete') as HTMLButtonElement
+    btn.disabled = true
+    btn.textContent = 'Salvando...'
+
+    const res = await fetch('/student/api/progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        lessonId,
+        watchedSec,
+        lastPositionSec: watchedSec,
+        completed: true,
+      }),
+    })
+
+    if (res.ok) {
+      btn.textContent = '✓ Concluída'
+      setTimeout(() => location.reload(), 500)
+    } else {
+      btn.textContent = 'Erro. Tente novamente.'
+      btn.disabled = false
+    }
+  })
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+
+    const links = Array.from(document.querySelectorAll('aside a'))
+    const currentIdx = links.findIndex(l => l.href.includes(lessonId))
+
+    if (e.key === 'ArrowRight' && links[currentIdx + 1]) {
+      location.href = links[currentIdx + 1].href
+    }
+    if (e.key === 'ArrowLeft' && links[currentIdx - 1]) {
+      location.href = links[currentIdx - 1].href
+    }
+  })
+</script>
