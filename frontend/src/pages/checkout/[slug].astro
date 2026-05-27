@@ -1,0 +1,195 @@
+---
+import Layout from '../../layouts/Layout.astro'
+import Button from '../../components/ui/Button.astro'
+import { db } from '../../lib/turso'
+
+const slug = Astro.params.slug
+
+const productResult = await db.execute({
+  sql: 'SELECT * FROM products WHERE slug = ? AND status = ?',
+  args: [slug, 'published'],
+})
+
+if (productResult.rows.length === 0) {
+  return Astro.redirect('/')
+}
+
+const product = productResult.rows[0] as any
+---
+
+<Layout title={`Checkout | ${product.title}`}>
+  <div class="min-h-screen flex items-center justify-center px-4 py-12">
+    <div class="absolute inset-0 bg-gradient-to-br from-azul-profundo via-bg-dark to-verde-principal opacity-40"></div>
+    
+    <div class="relative z-10 w-full max-w-lg">
+      <div class="text-center mb-8">
+        <h1 class="font-display text-4xl font-bold text-dourado">WORKSHOP</h1>
+        <p class="text-text-muted mt-2 tracking-widest text-sm uppercase">Checkout</p>
+      </div>
+      
+      <div class="bg-azul-profundo rounded-xl border border-white/10 p-8">
+        <div class="flex items-center gap-4 mb-6 pb-6 border-b border-white/5">
+          {product.cover_url && (
+            <img src={product.cover_url} alt={product.title} class="w-20 h-20 rounded-lg object-cover" />
+          )}
+          <div>
+            <h2 class="font-bold text-text-light">{product.title}</h2>
+            <p class="text-text-muted text-sm">{product.type === 'course' ? 'Curso' : product.type === 'workshop' ? 'Workshop' : 'E-book'}</p>
+          </div>
+        </div>
+        
+        <div class="space-y-4 mb-6">
+          <div class="flex justify-between">
+            <span class="text-text-muted">Preço</span>
+            <span class="text-text-light">R$ {((product.price_cents || 0) / 100).toFixed(2)}</span>
+          </div>
+          <div class="flex justify-between text-lg font-bold">
+            <span class="text-dourado">Total</span>
+            <span class="text-dourado">R$ {((product.price_cents || 0) / 100).toFixed(2)}</span>
+          </div>
+        </div>
+        
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-text-muted mb-2">Cupom de desconto</label>
+          <div class="flex gap-2">
+            <input id="coupon-code" type="text" class="flex-1 bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light uppercase" placeholder="CUPOM10" />
+            <button onclick="applyCoupon()" class="bg-dourado/20 hover:bg-dourado/30 text-dourado px-4 py-2 rounded-lg font-medium transition-colors">
+              Aplicar
+            </button>
+          </div>
+          <p id="coupon-message" class="text-sm mt-2 hidden"></p>
+        </div>
+        
+        <form id="checkout-form">
+          <div class="space-y-4 mb-6">
+            <div>
+              <label class="block text-sm font-medium text-text-muted mb-2">Nome completo *</label>
+              <input id="full_name" type="text" required class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-text-muted mb-2">Email *</label>
+              <input id="email" type="email" required class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-text-muted mb-2">CPF *</label>
+              <input id="cpf" type="text" required maxlength="11" class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-text-muted mb-2">WhatsApp *</label>
+              <input id="whatsapp" type="tel" required class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light" placeholder="+5511999999999" />
+            </div>
+          </div>
+          
+          <div id="error-msg" class="hidden p-3 rounded-lg text-sm bg-vermelho/10 border border-vermelho/30 text-vermelho mb-4"></div>
+          <div id="success-msg" class="hidden p-3 rounded-lg text-sm bg-verde-claro/10 border border-verde-claro/30 text-verde-claro mb-4"></div>
+          
+          <button type="submit" id="submit-btn" class="w-full bg-verde-principal hover:bg-verde-claro text-white px-6 py-4 rounded-lg font-bold text-lg transition-colors">
+            <span id="btn-text">Finalizar Compra</span>
+            <span id="btn-loading" class="hidden">Processando...</span>
+          </button>
+        </form>
+        
+        <p class="text-center text-text-muted text-xs mt-4">
+          Ao comprar, você concorda com os <a href="/termos" class="text-dourado">Termos de Uso</a>.
+        </p>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script define:vars={{ productId: product.id, priceCents: product.price_cents }}>
+  let currentPrice = priceCents
+  let appliedCoupon = null
+
+  async function applyCoupon() {
+    const code = document.getElementById('coupon-code').value.trim().toUpperCase()
+    const msg = document.getElementById('coupon-message')
+    msg.classList.remove('hidden', 'text-verde-claro', 'text-vermelho')
+    
+    if (!code) return
+    
+    try {
+      const res = await fetch('/api/validate-coupon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, product_id: productId }),
+      })
+      const data = await res.json()
+      
+      if (res.ok && data.valid) {
+        appliedCoupon = data.coupon
+        currentPrice = data.final_price_cents
+        msg.textContent = `Cupom aplicado! Desconto: R$ ${(data.discount_cents / 100).toFixed(2)}`
+        msg.classList.add('text-verde-claro')
+        msg.classList.remove('hidden')
+      } else {
+        msg.textContent = data.error || 'Cupom inválido'
+        msg.classList.add('text-vermelho')
+        msg.classList.remove('hidden')
+      }
+    } catch (e) {
+      msg.textContent = 'Erro ao validar cupom'
+      msg.classList.add('text-vermelho')
+      msg.classList.remove('hidden')
+    }
+  }
+
+  document.getElementById('checkout-form').addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const btnText = document.getElementById('btn-text')
+    const btnLoading = document.getElementById('btn-loading')
+    const submitBtn = document.getElementById('submit-btn')
+    const errorMsg = document.getElementById('error-msg')
+    const successMsg = document.getElementById('success-msg')
+    
+    errorMsg.classList.add('hidden')
+    successMsg.classList.add('hidden')
+    btnText.classList.add('hidden')
+    btnLoading.classList.remove('hidden')
+    submitBtn.disabled = true
+    
+    const data = {
+      product_id: productId,
+      full_name: document.getElementById('full_name').value.trim(),
+      email: document.getElementById('email').value.trim().toLowerCase(),
+      cpf: document.getElementById('cpf').value.replace(/\D/g, ''),
+      whatsapp: document.getElementById('whatsapp').value.trim(),
+      coupon_code: appliedCoupon?.code,
+      amount_cents: currentPrice,
+    }
+    
+    if (data.cpf.length !== 11) {
+      errorMsg.textContent = 'CPF deve ter 11 dígitos'
+      errorMsg.classList.remove('hidden')
+      btnText.classList.remove('hidden')
+      btnLoading.classList.add('hidden')
+      submitBtn.disabled = false
+      return
+    }
+    
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      const result = await res.json()
+      
+      if (res.ok) {
+        successMsg.textContent = 'Pedido criado com sucesso! Aguarde a aprovação do pagamento.'
+        successMsg.classList.remove('hidden')
+        document.getElementById('checkout-form').style.display = 'none'
+      } else {
+        errorMsg.textContent = result.error || 'Erro ao processar compra'
+        errorMsg.classList.remove('hidden')
+      }
+    } catch (e) {
+      errorMsg.textContent = 'Erro ao processar compra'
+      errorMsg.classList.remove('hidden')
+    } finally {
+      btnText.classList.remove('hidden')
+      btnLoading.classList.add('hidden')
+      submitBtn.disabled = false
+    }
+  })
+</script>

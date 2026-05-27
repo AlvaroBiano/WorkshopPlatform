@@ -1,39 +1,23 @@
 ---
 import Layout from '../layouts/Layout.astro'
 import Icon from '../components/ui/Icon.astro'
-import Card from '../components/ui/Card.astro'
 import Button from '../components/ui/Button.astro'
 import { db } from '../lib/turso'
 
 const refCode = Astro.url.searchParams.get('ref')
 
-if (refCode) {
-  try {
-    const affiliate = await db.execute({
-      sql: 'SELECT id FROM affiliates WHERE code = ? AND status = ?',
-      args: [refCode.toUpperCase(), 'active'],
-    })
-
-    if (affiliate.rows.length > 0) {
-      const visitorFp = 'fp_' + Date.now() + '_' + Math.random().toString(36).slice(2)
-
-      await db.execute({
-        sql: `INSERT INTO affiliate_clicks (id, affiliate_id, visitor_fp, ip_address, user_agent, referrer, landing_url, clicked_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-        args: [
-          crypto.randomUUID(),
-          affiliate.rows[0].id,
-          visitorFp,
-          Astro.request.headers.get('x-forwarded-for')?.split(',')[0] || null,
-          Astro.request.headers.get('user-agent') || null,
-          Astro.request.headers.get('referer') || null,
-          Astro.url.pathname + Astro.url.search,
-        ],
-      })
-    }
-  } catch (error) {
-    console.error('Erro ao registrar clique de afiliado:', error)
-  }
+let products: any[] = []
+try {
+  const result = await db.execute({
+    sql: `SELECT p.*, 
+          (SELECT COALESCE(AVG(rating), 0) FROM reviews WHERE product_id = p.id AND status = 'approved') as avg_rating,
+          (SELECT COUNT(*) FROM reviews WHERE product_id = p.id AND status = 'approved') as total_reviews
+          FROM products p WHERE p.status = 'published' ORDER BY p.created_at DESC`,
+    args: [],
+  })
+  products = result.rows as any[]
+} catch (error) {
+  console.error('Erro ao carregar produtos:', error)
 }
 ---
 
@@ -50,9 +34,7 @@ if (refCode) {
       </p>
 
       <p class="text-lg md:text-xl text-text-light max-w-2xl mx-auto mb-12 animate-slide-up" style="animation-delay: 0.1s">
-        Transforme sua vida com nosso workshop premium de alta transformação.
-        <span class="text-dourado font-semibold">32 aulas</span> distribuídas em
-        <span class="text-dourado font-semibold">6 módulos</span> completos.
+        Transforme sua vida com nossos workshops premium de alta transformação.
       </p>
 
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up" style="animation-delay: 0.2s">
@@ -71,40 +53,40 @@ if (refCode) {
   <section class="py-20 px-4">
     <div class="max-w-6xl mx-auto">
       <h2 class="font-display text-3xl md:text-4xl text-dourado text-center mb-16">
-        O Que Você Vai Encontrar
+        Nossos Programas
       </h2>
 
-      <div class="grid md:grid-cols-3 gap-8">
-        <Card class="text-center">
-          <div class="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-dourado/10">
-            <Icon name="graduation-cap" size={32} class="text-dourado" />
-          </div>
-          <h3 class="text-xl text-dourado mb-3">6 Módulos Completos</h3>
-          <p class="text-text-muted">
-            Conteúdo estruturado para você avançar passo a passo na sua jornada de transformação.
-          </p>
-        </Card>
-
-        <Card class="text-center">
-          <div class="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-dourado/10">
-            <Icon name="video" size={32} class="text-dourado" />
-          </div>
-          <h3 class="text-xl text-dourado mb-3">Vídeos em Alta Qualidade</h3>
-          <p class="text-text-muted">
-            Player integrado com suporte a múltiplos dispositivos, legendas e muito mais.
-          </p>
-        </Card>
-
-        <Card class="text-center">
-          <div class="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-dourado/10">
-            <Icon name="trending-up" size={32} class="text-dourado" />
-          </div>
-          <h3 class="text-xl text-dourado mb-3">Acompanhe Seu Progresso</h3>
-          <p class="text-text-muted">
-            Sistema inteligente que salva sua posição e permite continuar de onde parou.
-          </p>
-        </Card>
-      </div>
+      {products.length === 0 ? (
+        <div class="text-center py-12">
+          <p class="text-text-muted">Nenhum programa disponível no momento.</p>
+        </div>
+      ) : (
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {products.map(product => (
+            <a href={`/produto/${product.slug}`} class="bg-azul-profundo rounded-xl border border-white/10 overflow-hidden hover:shadow-lg transition-shadow group">
+              {product.cover_url ? (
+                <img src={product.cover_url} alt={product.title} class="w-full h-48 object-cover group-hover:scale-105 transition-transform" />
+              ) : (
+                <div class="w-full h-48 bg-bg-dark flex items-center justify-center">
+                  <Icon name="package" size={48} class="text-text-muted/30" />
+                </div>
+              )}
+              <div class="p-6">
+                <span class="text-xs text-text-muted uppercase tracking-wide">{product.type}</span>
+                <h3 class="text-xl font-display font-bold text-dourado mt-1 mb-2">{product.title}</h3>
+                <p class="text-text-muted text-sm mb-4 line-clamp-2">{product.description || ''}</p>
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="text-dourado"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <span class="text-text-muted text-sm">{Number(product.avg_rating || 0).toFixed(1)} ({product.total_reviews || 0})</span>
+                  </div>
+                  <span class="text-xl font-bold text-verde-claro">R$ {((product.price_cents || 0) / 100).toFixed(2)}</span>
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   </section>
 

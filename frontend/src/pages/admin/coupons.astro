@@ -1,0 +1,239 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro'
+import Card from '../../components/ui/Card.astro'
+import Icon from '../../components/ui/Icon.astro'
+import Button from '../../components/ui/Button.astro'
+import { getSessionFromCookies, isAdmin } from '../../lib/auth'
+
+const session = await getSessionFromCookies(Astro.cookies)
+if (!session?.profile || !isAdmin(session.profile)) {
+  return Astro.redirect('/login')
+}
+---
+
+<AdminLayout title="Cupons de Desconto">
+  <div class="mb-8">
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-3xl font-display font-bold text-dourado">Cupons de Desconto</h1>
+      <Button onclick="openCreateModal()" icon="plus" variant="primary">
+        Novo Cupom
+      </Button>
+    </div>
+  </div>
+
+  <div id="coupons-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="col-span-full text-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-2 border-dourado/20 border-t-dourado mx-auto mb-4"></div>
+      <p class="text-text-muted">Carregando cupons...</p>
+    </div>
+  </div>
+
+  <div id="coupon-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeModal()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="bg-azul-profundo rounded-xl border border-white/10 shadow-2xl w-full max-w-md transform transition-all">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-white/5">
+          <h2 id="modal-title" class="text-xl font-display font-bold text-dourado">Novo Cupom</h2>
+          <button onclick="closeModal()" class="p-2 text-text-muted hover:text-text-light hover:bg-white/5 rounded-lg transition-colors">
+            <Icon name="x" size={20} />
+          </button>
+        </div>
+        <form id="coupon-form" class="p-6">
+          <input type="hidden" id="coupon-id" />
+          
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-text-muted mb-2">Código *</label>
+            <input type="text" id="coupon-code" required class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light uppercase" placeholder="CUPOM10" />
+          </div>
+          
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-text-muted mb-2">Descrição</label>
+            <input type="text" id="coupon-description" class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light" placeholder="10% de desconto" />
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="block text-sm font-medium text-text-muted mb-2">Tipo</label>
+              <select id="coupon-discount-type" class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light">
+                <option value="percentage">%</option>
+                <option value="fixed">R$</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-text-muted mb-2">Valor</label>
+              <input type="number" id="coupon-discount-value" required min="0" class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light" />
+            </div>
+          </div>
+          
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-text-muted mb-2">Máximo de usos</label>
+            <input type="number" id="coupon-max-uses" min="1" class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light" placeholder="Ilimitado" />
+          </div>
+          
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-text-muted mb-2">Produto específico (opcional)</label>
+            <select id="coupon-product" class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light">
+              <option value="">Todos os produtos</option>
+            </select>
+          </div>
+
+          <div class="flex gap-4">
+            <button type="button" onclick="closeModal()" class="flex-1 bg-bg-dark hover:bg-white/5 text-text-light px-4 py-3 rounded-lg font-semibold transition-colors">
+              Cancelar
+            </button>
+            <button type="submit" class="flex-1 bg-verde-principal hover:bg-verde-claro text-white px-4 py-3 rounded-lg font-semibold transition-colors">
+              Salvar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('coupon-modal')
+    if (modal) document.body.appendChild(modal)
+  })
+
+  async function loadCoupons() {
+    try {
+      const res = await fetch('/admin/api/coupons')
+      const data = await res.json()
+      renderCoupons(data.coupons)
+    } catch (e) {
+      document.getElementById('coupons-grid').innerHTML = '<div class="col-span-full text-center text-vermelho">Erro ao carregar cupons</div>'
+    }
+  }
+
+  function renderCoupons(coupons) {
+    const grid = document.getElementById('coupons-grid')
+    if (!coupons || coupons.length === 0) {
+      grid.innerHTML = '<div class="col-span-full text-center text-text-muted py-12">Nenhum cupom cadastrado</div>'
+      return
+    }
+
+    grid.innerHTML = coupons.map(c => `
+      <div class="bg-azul-profundo rounded-xl border border-white/10 p-6">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h3 class="font-bold text-dourado text-lg">${c.code}</h3>
+            <p class="text-text-muted text-sm">${c.description || ''}</p>
+          </div>
+          <span class="px-2 py-1 rounded text-xs font-medium ${c.is_active ? 'bg-verde-claro/10 text-verde-claro' : 'bg-vermelho/10 text-vermelho'}">
+            ${c.is_active ? 'Ativo' : 'Inativo'}
+          </span>
+        </div>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-text-muted">Desconto</span>
+            <span class="text-text-light">${c.discount_type === 'percentage' ? c.discount_value + '%' : 'R$ ' + (c.discount_value / 100).toFixed(2)}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-text-muted">Usos</span>
+            <span class="text-text-light">${c.used_count}${c.max_uses ? '/' + c.max_uses : ''}</span>
+          </div>
+        </div>
+        <div class="flex gap-2 mt-4">
+          <button onclick="toggleCoupon('${c.id}', ${!c.is_active})" class="flex-1 bg-bg-dark hover:bg-white/10 text-text-light px-3 py-2 rounded text-sm transition-colors">
+            ${c.is_active ? 'Desativar' : 'Ativar'}
+          </button>
+          <button onclick="deleteCoupon('${c.id}')" class="bg-vermelho/20 hover:bg-vermelho/30 text-vermelho px-3 py-2 rounded text-sm transition-colors">
+            Remover
+          </button>
+        </div>
+      </div>
+    `).join('')
+  }
+
+  async function loadProducts() {
+    try {
+      const res = await fetch('/admin/api/products')
+      const data = await res.json()
+      const select = document.getElementById('coupon-product')
+      select.innerHTML = '<option value="">Todos os produtos</option>' +
+        data.products.map(p => `<option value="${p.id}">${p.title}</option>`).join('')
+    } catch (e) {}
+  }
+
+  function openCreateModal() {
+    document.getElementById('coupon-id').value = ''
+    document.getElementById('coupon-code').value = ''
+    document.getElementById('coupon-description').value = ''
+    document.getElementById('coupon-discount-type').value = 'percentage'
+    document.getElementById('coupon-discount-value').value = ''
+    document.getElementById('coupon-max-uses').value = ''
+    document.getElementById('coupon-product').value = ''
+    document.getElementById('coupon-modal').classList.remove('hidden')
+    document.getElementById('coupon-modal').classList.add('flex')
+    loadProducts()
+  }
+
+  function closeModal() {
+    document.getElementById('coupon-modal').classList.add('hidden')
+    document.getElementById('coupon-modal').classList.remove('flex')
+  }
+
+  async function toggleCoupon(id, active) {
+    try {
+      const res = await fetch(`/admin/api/coupons/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: active }),
+      })
+      if (res.ok) {
+        window.showToast('success', active ? 'Cupom ativado!' : 'Cupom desativado!')
+        loadCoupons()
+      }
+    } catch (e) {}
+  }
+
+  async function deleteCoupon(id) {
+    if (!confirm('Remover este cupom?')) return
+    try {
+      const res = await fetch(`/admin/api/coupons/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        window.showToast('success', 'Cupom removido!')
+        loadCoupons()
+      }
+    } catch (e) {}
+  }
+
+  document.getElementById('coupon-form').addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const data = {
+      code: document.getElementById('coupon-code').value.toUpperCase(),
+      description: document.getElementById('coupon-description').value,
+      discount_type: document.getElementById('coupon-discount-type').value,
+      discount_value: parseInt(document.getElementById('coupon-discount-value').value),
+      max_uses: document.getElementById('coupon-max-uses').value ? parseInt(document.getElementById('coupon-max-uses').value) : null,
+      product_id: document.getElementById('coupon-product').value || null,
+    }
+
+    try {
+      const res = await fetch('/admin/api/coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (res.ok) {
+        window.showToast('success', 'Cupom criado!')
+        closeModal()
+        loadCoupons()
+      } else {
+        const err = await res.json()
+        window.showToast('error', err.error || 'Erro ao criar cupom')
+      }
+    } catch (e) {
+      window.showToast('error', 'Erro ao criar cupom')
+    }
+  })
+
+  window.openCreateModal = openCreateModal
+  window.closeModal = closeModal
+  window.toggleCoupon = toggleCoupon
+  window.deleteCoupon = deleteCoupon
+
+  loadCoupons()
+</script>
