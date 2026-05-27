@@ -1,113 +1,285 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro'
-import { supabaseAdmin } from '../../lib/supabase-server'
+import { getSessionFromCookies, isAdmin } from '../../lib/auth'
 
-const userId = Astro.url.searchParams.get('user')
-
-const query = supabaseAdmin
-  .from('devices')
-  .select('*, user:users(full_name, email)')
-  .order('registered_at', { ascending: false })
-
-const { data: devices } = userId
-  ? await query.eq('user_id', userId)
-  : await query
-
-const { data: filterUser } = userId
-  ? await supabaseAdmin.from('users').select('*').eq('id', userId).single()
-  : { data: null }
+const session = await getSessionFromCookies(Astro.cookies)
+if (!session?.profile || !isAdmin(session.profile)) {
+  return Astro.redirect('/login')
+}
 ---
 
-<AdminLayout title="Dispositivos">
-  <h1 class="text-2xl font-display font-bold text-dourado mb-6">Gestão de Dispositivos</h1>
+<AdminLayout title="Gestão de Dispositivos">
+  <div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-dourado mb-8">Gestão de Dispositivos</h1>
 
-  {filterUser && (
-    <div class="card p-4 mb-6 bg-dourado/10 border-dourado/30">
-      <p class="text-sm text-text-muted">Visualizando dispositivos de:</p>
-      <p class="font-bold text-lg">{(filterUser as any).full_name} · {(filterUser as any).email}</p>
+    <!-- Cards de Estatísticas -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div class="bg-azul-profundo rounded-lg p-6">
+        <div class="text-text-muted text-sm mb-2">Total de Dispositivos</div>
+        <div class="text-3xl font-bold text-dourado" id="stat-total">0</div>
+      </div>
+      <div class="bg-azul-profundo rounded-lg p-6">
+        <div class="text-text-muted text-sm mb-2">Dispositivos Aprovados</div>
+        <div class="text-3xl font-bold text-verde-claro" id="stat-approved">0</div>
+      </div>
+      <div class="bg-azul-profundo rounded-lg p-6">
+        <div class="text-text-muted text-sm mb-2">Dispositivos Pendentes</div>
+        <div class="text-3xl font-bold text-dourado" id="stat-pending">0</div>
+      </div>
     </div>
-  )}
 
-  <div class="card overflow-hidden">
-    <table class="w-full text-sm">
-      <thead class="bg-white/5 text-text-muted">
-        <tr>
-          <th class="text-left p-4">Aluno</th>
-          <th class="text-left p-4">Dispositivo</th>
-          <th class="text-left p-4">IP</th>
-          <th class="text-left p-4">Status</th>
-          <th class="text-left p-4">Último acesso</th>
-          <th class="text-left p-4">Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        {(devices || []).map((d: any) => (
-          <tr class="border-t border-white/5">
-            <td class="p-4">
-              <p class="font-semibold">{d.user?.full_name}</p>
-              <p class="text-xs text-text-muted">{d.user?.email}</p>
-            </td>
-            <td class="p-4">
-              <p>{d.device_name}</p>
-              <p class="text-xs text-text-muted">{d.os} · {d.browser}</p>
-            </td>
-            <td class="p-4 font-mono text-xs">{d.ip_last_login || '—'}</td>
-            <td class="p-4">
-              {d.is_blocked
-                ? <span class="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs">Bloqueado</span>
-                : d.is_approved
-                  ? <span class="px-2 py-1 bg-verde-claro/20 text-verde-claro rounded text-xs">Aprovado</span>
-                  : <span class="px-2 py-1 bg-dourado/20 text-dourado rounded text-xs">Pendente</span>}
-            </td>
-            <td class="p-4 text-text-muted text-xs">
-              {new Date(d.last_seen_at).toLocaleString('pt-BR')}
-            </td>
-            <td class="p-4">
-              <div class="flex gap-2">
-                {!d.is_approved && !d.is_blocked && (
-                  <button onclick={`approveDevice('${d.id}')`} class="text-xs px-2 py-1 bg-verde-claro/20 text-verde-claro rounded">
-                    Aprovar
-                  </button>
-                )}
-                {d.is_approved && !d.is_blocked && (
-                  <button onclick={`blockDevice('${d.id}')`} class="text-xs px-2 py-1 bg-red-500/20 text-red-400 rounded">
-                    Bloquear
-                  </button>
-                )}
-              </div>
-            </td>
-          </tr>
-        ))}
-        {(!devices || devices.length === 0) && (
-          <tr>
-            <td colspan="6" class="p-8 text-center text-text-muted">Nenhum dispositivo encontrado</td>
-          </tr>
-        )}
-      </tbody>
-    </table>
+    <!-- Filtros -->
+    <div class="bg-azul-profundo rounded-lg p-6 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-text-muted text-sm mb-2">Buscar</label>
+          <input 
+            type="text" 
+            id="search-input"
+            placeholder="Nome, email ou dispositivo..."
+            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+          />
+        </div>
+        <div>
+          <label class="block text-text-muted text-sm mb-2">Status</label>
+          <select 
+            id="status-filter"
+            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+          >
+            <option value="">Todos</option>
+            <option value="approved">Aprovados</option>
+            <option value="pending">Pendentes</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button 
+            onclick="loadDevices()"
+            class="w-full bg-verde-principal hover:bg-verde-escuro text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+          >
+            Filtrar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela de Dispositivos -->
+    <div class="bg-azul-profundo rounded-lg overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-bg-dark/50">
+            <tr>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Usuário</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Dispositivo</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">IP</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Status</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Registro</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Último Acesso</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="devices-table">
+            <tr>
+              <td colspan="7" class="px-6 py-8 text-center text-text-muted">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-dourado mx-auto"></div>
+                <p class="mt-2">Carregando...</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginação -->
+      <div class="px-6 py-4 bg-bg-dark/50 flex justify-between items-center">
+        <div class="text-text-muted text-sm">
+          Mostrando <span id="showing-start">0</span> a <span id="showing-end">0</span> de <span id="total-items">0</span> dispositivos
+        </div>
+        <div class="flex gap-2" id="pagination-controls">
+          <!-- Botões de paginação serão inseridos via JS -->
+        </div>
+      </div>
+    </div>
   </div>
 </AdminLayout>
 
 <script>
-  window.approveDevice = async (id: string) => {
-    const res = await fetch('/admin/api/devices', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, action: 'approve' }),
+  let currentPage = 1
+  let currentSearch = ''
+  let currentStatus = ''
+
+  async function loadDevices() {
+    currentSearch = document.getElementById('search-input').value
+    currentStatus = document.getElementById('status-filter').value
+
+    const params = new URLSearchParams({
+      page: currentPage.toString(),
+      limit: '20',
+      search: currentSearch,
+      status: currentStatus,
     })
-    if (res.ok) location.reload()
-    else alert('Erro: ' + await res.text())
+
+    try {
+      const response = await fetch(`/admin/api/devices?${params}`)
+      const data = await response.json()
+
+      renderDevices(data.devices)
+      renderPagination(data)
+      updateStats(data)
+    } catch (error) {
+      console.error('Erro ao carregar dispositivos:', error)
+      document.getElementById('devices-table').innerHTML = `
+        <tr>
+          <td colspan="7" class="px-6 py-8 text-center text-vermelho">
+            Erro ao carregar dispositivos
+          </td>
+        </tr>
+      `
+    }
   }
 
-  window.blockDevice = async (id: string) => {
-    const reason = prompt('Motivo do bloqueio:')
-    if (!reason) return
-    const res = await fetch('/admin/api/devices', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, action: 'block', reason }),
-    })
-    if (res.ok) location.reload()
-    else alert('Erro: ' + await res.text())
+  function renderDevices(devices) {
+    const tbody = document.getElementById('devices-table')
+    
+    if (devices.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="px-6 py-8 text-center text-text-muted">
+            Nenhum dispositivo encontrado
+          </td>
+        </tr>
+      `
+      return
+    }
+
+    tbody.innerHTML = devices.map(device => {
+      const statusLabel = device.is_approved ? 'Aprovado' : 'Pendente'
+      const statusColor = device.is_approved ? 'text-verde-claro' : 'text-dourado'
+
+      return `
+        <tr class="border-t border-verde-principal/10 hover:bg-bg-dark/30">
+          <td class="px-6 py-4">
+            <div class="text-text-light">${device.user_name || '—'}</div>
+            <div class="text-text-muted text-sm">${device.user_email || '—'}</div>
+          </td>
+          <td class="px-6 py-4">
+            <div class="text-text-light text-sm">${device.device_info || 'Desconhecido'}</div>
+            <div class="text-text-muted text-xs font-mono">${device.fingerprint?.substring(0, 16) || '—'}...</div>
+          </td>
+          <td class="px-6 py-4 text-text-muted text-sm font-mono">${device.ip_address || '—'}</td>
+          <td class="px-6 py-4">
+            <span class="${statusColor} font-semibold">${statusLabel}</span>
+          </td>
+          <td class="px-6 py-4 text-text-muted text-sm">
+            ${new Date(device.registered_at).toLocaleDateString('pt-BR')}
+          </td>
+          <td class="px-6 py-4 text-text-muted text-sm">
+            ${device.last_seen_at ? new Date(device.last_seen_at).toLocaleDateString('pt-BR') : 'Nunca'}
+          </td>
+          <td class="px-6 py-4">
+            <div class="flex gap-2">
+              ${!device.is_approved ? `
+                <button 
+                  onclick="approveDevice('${device.id}')"
+                  class="text-verde-claro hover:text-verde-claro/80 text-sm"
+                >
+                  Aprovar
+                </button>
+              ` : ''}
+              <button 
+                onclick="deleteDevice('${device.id}')"
+                class="text-vermelho hover:text-vermelho/80 text-sm"
+              >
+                Remover
+              </button>
+            </div>
+          </td>
+        </tr>
+      `
+    }).join('')
   }
+
+  function renderPagination(data) {
+    const { page, totalPages, total, devices } = data
+    const start = (page - 1) * 20 + 1
+    const end = Math.min(page * 20, total)
+
+    document.getElementById('showing-start').textContent = start
+    document.getElementById('showing-end').textContent = end
+    document.getElementById('total-items').textContent = total
+
+    const controls = document.getElementById('pagination-controls')
+    let html = ''
+
+    if (page > 1) {
+      html += `<button onclick="goToPage(${page - 1})" class="px-4 py-2 bg-bg-dark hover:bg-bg-dark/80 text-text-light rounded-lg">Anterior</button>`
+    }
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === page) {
+        html += `<button class="px-4 py-2 bg-verde-principal text-white rounded-lg">${i}</button>`
+      } else if (i === 1 || i === totalPages || (i >= page - 2 && i <= page + 2)) {
+        html += `<button onclick="goToPage(${i})" class="px-4 py-2 bg-bg-dark hover:bg-bg-dark/80 text-text-light rounded-lg">${i}</button>`
+      } else if (i === page - 3 || i === page + 3) {
+        html += `<span class="px-2 text-text-muted">...</span>`
+      }
+    }
+
+    if (page < totalPages) {
+      html += `<button onclick="goToPage(${page + 1})" class="px-4 py-2 bg-bg-dark hover:bg-bg-dark/80 text-text-light rounded-lg">Próximo</button>`
+    }
+
+    controls.innerHTML = html
+  }
+
+  function updateStats(data) {
+    document.getElementById('stat-total').textContent = data.total
+    document.getElementById('stat-approved').textContent = data.devices.filter(d => d.is_approved).length
+    document.getElementById('stat-pending').textContent = data.devices.filter(d => !d.is_approved).length
+  }
+
+  function goToPage(page) {
+    currentPage = page
+    loadDevices()
+  }
+
+  async function approveDevice(id) {
+    if (!confirm('Tem certeza que deseja aprovar este dispositivo?')) return
+
+    try {
+      const response = await fetch(`/admin/api/devices/${id}/approve`, {
+        method: 'POST',
+      })
+
+      if (response.ok) {
+        alert('Dispositivo aprovado com sucesso!')
+        loadDevices()
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Erro ao aprovar dispositivo')
+      }
+    } catch (error) {
+      alert('Erro ao aprovar dispositivo')
+    }
+  }
+
+  async function deleteDevice(id) {
+    if (!confirm('Tem certeza que deseja remover este dispositivo? O usuário precisará fazer login novamente.')) return
+
+    try {
+      const response = await fetch(`/admin/api/devices/${id}/delete`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        alert('Dispositivo removido com sucesso!')
+        loadDevices()
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Erro ao remover dispositivo')
+      }
+    } catch (error) {
+      alert('Erro ao remover dispositivo')
+    }
+  }
+
+  loadDevices()
 </script>
