@@ -12,6 +12,7 @@ const [studentsResult, ordersResult] = await Promise.all([
 const totalStudents = Number(studentsResult.rows[0]?.count || 0)
 const recentOrders = ordersResult.rows || []
 const monthRevenue = 0
+const pendingCount = 0
 ---
 
 <AdminLayout title="Dashboard">
