@@ -400,6 +400,7 @@ if (!session?.profile || !isAdmin(session.profile)) {
   }
 
   async function addModule() {
+    console.log('addModule called, currentProductId:', currentProductId)
     const title = prompt('Título do módulo:')
     if (!title) return
 
@@ -409,6 +410,7 @@ if (!session?.profile || !isAdmin(session.profile)) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title }),
       })
+      console.log('addModule response:', response.status, await response.text().catch(() => ''))
 
       if (response.ok) {
         openContentEditor(currentProductId)
@@ -416,7 +418,8 @@ if (!session?.profile || !isAdmin(session.profile)) {
         window.showToast('error', 'Erro ao criar módulo')
       }
     } catch (error) {
-      window.showToast('error', 'Erro ao criar módulo')
+      console.error('addModule error:', error)
+      window.showToast('error', 'Erro ao criar módulo: ' + (error as Error).message)
     }
   }
 
