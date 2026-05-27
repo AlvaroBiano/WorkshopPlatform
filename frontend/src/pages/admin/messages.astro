@@ -197,6 +197,11 @@ if (!session?.profile || !isAdmin(session.profile)) {
 </AdminLayout>
 
 <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const sendModal = document.getElementById('send-modal')
+    if (sendModal) document.body.appendChild(sendModal)
+  })
+
   let currentPage = 1
   let currentSearch = ''
   let currentType = ''

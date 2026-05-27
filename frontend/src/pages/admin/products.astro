@@ -171,6 +171,13 @@ if (!session?.profile || !isAdmin(session.profile)) {
 </AdminLayout>
 
 <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const productModal = document.getElementById('product-modal')
+    const contentModal = document.getElementById('content-modal')
+    if (productModal) document.body.appendChild(productModal)
+    if (contentModal) document.body.appendChild(contentModal)
+  })
+
   let currentProductId = ''
   let products = []
 

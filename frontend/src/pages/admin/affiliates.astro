@@ -257,6 +257,13 @@ if (!session?.profile || !isAdmin(session.profile)) {
 </AdminLayout>
 
 <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const affiliateModal = document.getElementById('affiliate-modal')
+    const detailsModal = document.getElementById('details-modal')
+    if (affiliateModal) document.body.appendChild(affiliateModal)
+    if (detailsModal) document.body.appendChild(detailsModal)
+  })
+
   let currentPage = 1
   let currentSearch = ''
   let currentStatus = ''

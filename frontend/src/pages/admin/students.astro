@@ -239,6 +239,14 @@ if (!session?.profile || !isAdmin(session.profile)) {
 </AdminLayout>
 
 <script>
+  // Move modais para o body para evitar problemas com stacking context
+  document.addEventListener('DOMContentLoaded', () => {
+    const studentModal = document.getElementById('student-modal')
+    const banModal = document.getElementById('ban-modal')
+    if (studentModal) document.body.appendChild(studentModal)
+    if (banModal) document.body.appendChild(banModal)
+  })
+
   let currentPage = 1
   let currentSearch = ''
   let currentStatus = ''

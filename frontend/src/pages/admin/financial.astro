@@ -194,6 +194,13 @@ if (!session?.profile || !isAdmin(session.profile)) {
 </AdminLayout>
 
 <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const orderModal = document.getElementById('order-modal')
+    const rejectModal = document.getElementById('reject-modal')
+    if (orderModal) document.body.appendChild(orderModal)
+    if (rejectModal) document.body.appendChild(rejectModal)
+  })
+
   let currentPage = 1
   let currentSearch = ''
   let currentStatus = ''
