@@ -1,76 +1,563 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro'
-import { supabaseAdmin } from '../../lib/supabase-server'
+import { getSessionFromCookies, isAdmin } from '../../lib/auth'
 
-const { data: affiliates } = await supabaseAdmin
-  .from('affiliates')
-  .select('*, user:users(full_name, email)')
-  .order('created_at', { ascending: false })
+const session = await getSessionFromCookies(Astro.cookies)
+if (!session?.profile || !isAdmin(session.profile)) {
+  return Astro.redirect('/login')
+}
 ---
 
-<AdminLayout title="Afiliados">
-  <h1 class="text-2xl font-display font-bold text-dourado mb-6">Gestão de Afiliados</h1>
+<AdminLayout title="Gestão de Afiliados">
+  <div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-8">
+      <h1 class="text-3xl font-bold text-dourado">Gestão de Afiliados</h1>
+      <button 
+        onclick="openCreateModal()"
+        class="bg-verde-principal hover:bg-verde-escuro text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+      >
+        + Novo Afiliado
+      </button>
+    </div>
 
-  <div class="card overflow-hidden">
-    <table class="w-full text-sm">
-      <thead class="bg-white/5 text-text-muted">
-        <tr>
-          <th class="text-left p-4">Afiliado</th>
-          <th class="text-left p-4">Código</th>
-          <th class="text-left p-4">Comissão</th>
-          <th class="text-left p-4">Saldo</th>
-          <th class="text-left p-4">Status</th>
-          <th class="text-left p-4">Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        {(affiliates || []).map((a: any) => (
-          <tr class="border-t border-white/5">
-            <td class="p-4">
-              <p class="font-semibold">{a.user?.full_name}</p>
-              <p class="text-xs text-text-muted">{a.user?.email}</p>
-            </td>
-            <td class="p-4 font-mono text-dourado">{a.code}</td>
-            <td class="p-4">{a.commission_pct}%</td>
-            <td class="p-4 text-verde-claro">R$ {((a.balance_cents || 0) / 100).toFixed(2)}</td>
-            <td class="p-4">
-              <span class:list={[
-                'px-2 py-1 rounded text-xs',
-                a.status === 'active' ? 'bg-verde-claro/20 text-verde-claro' :
-                a.status === 'pending' ? 'bg-dourado/20 text-dourado' :
-                'bg-red-500/20 text-red-400'
-              ]}>
-                {a.status === 'active' ? 'Ativo' : a.status === 'pending' ? 'Pendente' : 'Bloqueado'}
-              </span>
-            </td>
-            <td class="p-4">
-              {a.status === 'pending' && (
-                <button onclick={`approveAffiliate('${a.id}')`} class="text-xs px-2 py-1 bg-verde-claro/20 text-verde-claro rounded">
-                  Aprovar
-                </button>
-              )}
-            </td>
-          </tr>
-        ))}
-        {(!affiliates || affiliates.length === 0) && (
-          <tr>
-            <td colspan="6" class="p-8 text-center text-text-muted">Nenhum afiliado cadastrado</td>
-          </tr>
-        )}
-      </tbody>
-    </table>
+    <!-- Filtros -->
+    <div class="bg-azul-profundo rounded-lg p-6 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-text-muted text-sm mb-2">Buscar</label>
+          <input 
+            type="text" 
+            id="search-input"
+            placeholder="Nome, email ou código..."
+            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+          />
+        </div>
+        <div>
+          <label class="block text-text-muted text-sm mb-2">Status</label>
+          <select 
+            id="status-filter"
+            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+          >
+            <option value="">Todos</option>
+            <option value="active">Ativos</option>
+            <option value="inactive">Inativos</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button 
+            onclick="loadAffiliates()"
+            class="w-full bg-verde-principal hover:bg-verde-escuro text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+          >
+            Filtrar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela de Afiliados -->
+    <div class="bg-azul-profundo rounded-lg overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-bg-dark/50">
+            <tr>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Afiliado</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Código</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Comissão</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Cliques</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Conversões</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Ganhos</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Status</th>
+              <th class="px-6 py-4 text-left text-text-muted font-semibold">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="affiliates-table">
+            <tr>
+              <td colspan="8" class="px-6 py-8 text-center text-text-muted">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-dourado mx-auto"></div>
+                <p class="mt-2">Carregando...</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginação -->
+      <div class="px-6 py-4 bg-bg-dark/50 flex justify-between items-center">
+        <div class="text-text-muted text-sm">
+          Mostrando <span id="showing-start">0</span> a <span id="showing-end">0</span> de <span id="total-items">0</span> afiliados
+        </div>
+        <div class="flex gap-2" id="pagination-controls">
+          <!-- Botões de paginação serão inseridos via JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Criar/Editar Afiliado -->
+  <div id="affiliate-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50">
+    <div class="bg-azul-profundo rounded-lg p-8 max-w-md w-full mx-4">
+      <h2 id="modal-title" class="text-2xl font-bold text-dourado mb-6">Novo Afiliado</h2>
+      <form id="affiliate-form">
+        <input type="hidden" id="affiliate-id" />
+        
+        <div class="mb-4">
+          <label class="block text-text-muted text-sm mb-2">Usuário *</label>
+          <select 
+            id="affiliate-user"
+            required
+            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+          >
+            <option value="">Selecione um usuário...</option>
+          </select>
+        </div>
+
+        <div class="mb-6">
+          <label class="block text-text-muted text-sm mb-2">Comissão (%)</label>
+          <input 
+            type="number" 
+            id="affiliate-commission"
+            min="0"
+            max="100"
+            value="40"
+            class="w-full bg-bg-dark border border-verde-principal/30 rounded-lg px-4 py-2 text-text-light focus:outline-none focus:border-verde-principal"
+          />
+        </div>
+
+        <div class="flex gap-4">
+          <button 
+            type="button"
+            onclick="closeAffiliateModal()"
+            class="flex-1 bg-bg-dark hover:bg-bg-dark/80 text-text-light px-6 py-3 rounded-lg font-semibold transition-colors"
+          >
+            Cancelar
+          </button>
+          <button 
+            type="submit"
+            class="flex-1 bg-verde-principal hover:bg-verde-escuro text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+          >
+            Salvar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de Detalhes do Afiliado -->
+  <div id="details-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 overflow-y-auto">
+    <div class="bg-azul-profundo rounded-lg p-8 max-w-4xl w-full mx-4 my-8">
+      <div class="flex justify-between items-center mb-6">
+        <h2 id="details-title" class="text-2xl font-bold text-dourado">Detalhes do Afiliado</h2>
+        <button onclick="closeDetailsModal()" class="text-text-muted hover:text-text-light text-2xl">&times;</button>
+      </div>
+
+      <!-- Tabs -->
+      <div class="flex gap-4 mb-6 border-b border-verde-principal/20">
+        <button onclick="switchTab('overview')" class="tab-btn px-4 py-2 text-dourado border-b-2 border-dourado" data-tab="overview">Visão Geral</button>
+        <button onclick="switchTab('clicks')" class="tab-btn px-4 py-2 text-text-muted hover:text-text-light" data-tab="clicks">Cliques</button>
+        <button onclick="switchTab('conversions')" class="tab-btn px-4 py-2 text-text-muted hover:text-text-light" data-tab="conversions">Conversões</button>
+      </div>
+
+      <!-- Tab Content -->
+      <div id="tab-overview" class="tab-content">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div class="bg-bg-dark rounded-lg p-4">
+            <div class="text-text-muted text-sm">Cliques</div>
+            <div class="text-2xl font-bold text-dourado" id="stat-clicks">0</div>
+          </div>
+          <div class="bg-bg-dark rounded-lg p-4">
+            <div class="text-text-muted text-sm">Conversões</div>
+            <div class="text-2xl font-bold text-verde-claro" id="stat-conversions">0</div>
+          </div>
+          <div class="bg-bg-dark rounded-lg p-4">
+            <div class="text-text-muted text-sm">Taxa de Conversão</div>
+            <div class="text-2xl font-bold text-dourado" id="stat-rate">0%</div>
+          </div>
+          <div class="bg-bg-dark rounded-lg p-4">
+            <div class="text-text-muted text-sm">Ganhos Totais</div>
+            <div class="text-2xl font-bold text-verde-claro" id="stat-earned">R$ 0,00</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-clicks" class="tab-content hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-bg-dark/50">
+              <tr>
+                <th class="px-4 py-3 text-left text-text-muted text-sm">Data</th>
+                <th class="px-4 py-3 text-left text-text-muted text-sm">IP</th>
+                <th class="px-4 py-3 text-left text-text-muted text-sm">User Agent</th>
+              </tr>
+            </thead>
+            <tbody id="clicks-table">
+              <tr>
+                <td colspan="3" class="px-4 py-8 text-center text-text-muted">Carregando...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="tab-conversions" class="tab-content hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-bg-dark/50">
+              <tr>
+                <th class="px-4 py-3 text-left text-text-muted text-sm">Data</th>
+                <th class="px-4 py-3 text-left text-text-muted text-sm">Pedido</th>
+                <th class="px-4 py-3 text-left text-text-muted text-sm">Cliente</th>
+                <th class="px-4 py-3 text-left text-text-muted text-sm">Produto</th>
+                <th class="px-4 py-3 text-left text-text-muted text-sm">Comissão</th>
+                <th class="px-4 py-3 text-left text-text-muted text-sm">Status</th>
+              </tr>
+            </thead>
+            <tbody id="conversions-table">
+              <tr>
+                <td colspan="6" class="px-4 py-8 text-center text-text-muted">Carregando...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="flex gap-4 mt-6">
+        <button 
+          onclick="closeDetailsModal()"
+          class="flex-1 bg-bg-dark hover:bg-bg-dark/80 text-text-light px-6 py-3 rounded-lg font-semibold transition-colors"
+        >
+          Fechar
+        </button>
+      </div>
+    </div>
   </div>
 </AdminLayout>
 
 <script>
-  window.approveAffiliate = async (id: string) => {
-    if (!confirm('Aprovar este afiliado?')) return
-    const res = await fetch('/admin/api/affiliates', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, action: 'approve' }),
+  let currentPage = 1
+  let currentSearch = ''
+  let currentStatus = ''
+  let currentAffiliateId = ''
+
+  async function loadAffiliates() {
+    currentSearch = document.getElementById('search-input').value
+    currentStatus = document.getElementById('status-filter').value
+
+    const params = new URLSearchParams({
+      page: currentPage.toString(),
+      limit: '20',
+      search: currentSearch,
+      status: currentStatus,
     })
-    if (res.ok) location.reload()
-    else alert('Erro: ' + await res.text())
+
+    try {
+      const response = await fetch(`/admin/api/affiliates?${params}`)
+      const data = await response.json()
+
+      renderAffiliates(data.affiliates)
+      renderPagination(data)
+    } catch (error) {
+      console.error('Erro ao carregar afiliados:', error)
+      document.getElementById('affiliates-table').innerHTML = `
+        <tr>
+          <td colspan="8" class="px-6 py-8 text-center text-vermelho">
+            Erro ao carregar afiliados
+          </td>
+        </tr>
+      `
+    }
   }
+
+  function renderAffiliates(affiliates) {
+    const tbody = document.getElementById('affiliates-table')
+    
+    if (affiliates.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" class="px-6 py-8 text-center text-text-muted">
+            Nenhum afiliado encontrado
+          </td>
+        </tr>
+      `
+      return
+    }
+
+    tbody.innerHTML = affiliates.map(affiliate => {
+      const statusLabel = affiliate.is_active ? 'Ativo' : 'Inativo'
+      const statusColor = affiliate.is_active ? 'text-verde-claro' : 'text-vermelho'
+      const conversionRate = affiliate.clicks_count > 0 
+        ? ((affiliate.conversions_count / affiliate.clicks_count) * 100).toFixed(1)
+        : '0.0'
+
+      return `
+        <tr class="border-t border-verde-principal/10 hover:bg-bg-dark/30">
+          <td class="px-6 py-4">
+            <div class="text-text-light">${affiliate.user_name || '—'}</div>
+            <div class="text-text-muted text-sm">${affiliate.user_email || '—'}</div>
+          </td>
+          <td class="px-6 py-4 text-dourado font-mono font-bold">${affiliate.code}</td>
+          <td class="px-6 py-4 text-text-light">${affiliate.commission_pct}%</td>
+          <td class="px-6 py-4 text-text-muted">${affiliate.clicks_count || 0}</td>
+          <td class="px-6 py-4">
+            <div class="text-text-light">${affiliate.conversions_count || 0}</div>
+            <div class="text-text-muted text-xs">${conversionRate}%</div>
+          </td>
+          <td class="px-6 py-4">
+            <div class="text-verde-claro font-semibold">R$ ${(((affiliate.total_paid_cents || 0) + (affiliate.total_pending_cents || 0)) / 100).toFixed(2)}</div>
+            <div class="text-text-muted text-xs">Pago: R$ ${((affiliate.total_paid_cents || 0) / 100).toFixed(2)}</div>
+          </td>
+          <td class="px-6 py-4">
+            <span class="${statusColor} font-semibold">${statusLabel}</span>
+          </td>
+          <td class="px-6 py-4">
+            <div class="flex gap-2">
+              <button 
+                onclick="openDetailsModal('${affiliate.id}')"
+                class="text-dourado hover:text-dourado/80 text-sm"
+              >
+                Detalhes
+              </button>
+              ${affiliate.is_active ? `
+                <button 
+                  onclick="deactivateAffiliate('${affiliate.id}')"
+                  class="text-vermelho hover:text-vermelho/80 text-sm"
+                >
+                  Desativar
+                </button>
+              ` : ''}
+            </div>
+          </td>
+        </tr>
+      `
+    }).join('')
+  }
+
+  function renderPagination(data) {
+    const { page, totalPages, total, affiliates } = data
+    const start = (page - 1) * 20 + 1
+    const end = Math.min(page * 20, total)
+
+    document.getElementById('showing-start').textContent = start
+    document.getElementById('showing-end').textContent = end
+    document.getElementById('total-items').textContent = total
+
+    const controls = document.getElementById('pagination-controls')
+    let html = ''
+
+    if (page > 1) {
+      html += `<button onclick="goToPage(${page - 1})" class="px-4 py-2 bg-bg-dark hover:bg-bg-dark/80 text-text-light rounded-lg">Anterior</button>`
+    }
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === page) {
+        html += `<button class="px-4 py-2 bg-verde-principal text-white rounded-lg">${i}</button>`
+      } else if (i === 1 || i === totalPages || (i >= page - 2 && i <= page + 2)) {
+        html += `<button onclick="goToPage(${i})" class="px-4 py-2 bg-bg-dark hover:bg-bg-dark/80 text-text-light rounded-lg">${i}</button>`
+      } else if (i === page - 3 || i === page + 3) {
+        html += `<span class="px-2 text-text-muted">...</span>`
+      }
+    }
+
+    if (page < totalPages) {
+      html += `<button onclick="goToPage(${page + 1})" class="px-4 py-2 bg-bg-dark hover:bg-bg-dark/80 text-text-light rounded-lg">Próximo</button>`
+    }
+
+    controls.innerHTML = html
+  }
+
+  function goToPage(page) {
+    currentPage = page
+    loadAffiliates()
+  }
+
+  async function openCreateModal() {
+    try {
+      const response = await fetch('/admin/api/students?limit=100')
+      const data = await response.json()
+
+      const select = document.getElementById('affiliate-user')
+      select.innerHTML = '<option value="">Selecione um usuário...</option>'
+      
+      data.students.forEach(student => {
+        select.innerHTML += `<option value="${student.id}">${student.full_name} (${student.email})</option>`
+      })
+
+      document.getElementById('modal-title').textContent = 'Novo Afiliado'
+      document.getElementById('affiliate-id').value = ''
+      document.getElementById('affiliate-user').value = ''
+      document.getElementById('affiliate-commission').value = '40'
+      document.getElementById('affiliate-modal').classList.remove('hidden')
+      document.getElementById('affiliate-modal').classList.add('flex')
+    } catch (error) {
+      alert('Erro ao carregar lista de usuários')
+    }
+  }
+
+  function closeAffiliateModal() {
+    document.getElementById('affiliate-modal').classList.add('hidden')
+    document.getElementById('affiliate-modal').classList.remove('flex')
+  }
+
+  async function openDetailsModal(id) {
+    currentAffiliateId = id
+    try {
+      const response = await fetch(`/admin/api/affiliates/${id}/stats`)
+      const stats = await response.json()
+
+      document.getElementById('stat-clicks').textContent = stats.clicks
+      document.getElementById('stat-conversions').textContent = stats.conversions
+      document.getElementById('stat-rate').textContent = `${stats.conversion_rate}%`
+      document.getElementById('stat-earned').textContent = `R$ ${(stats.total_earned_cents / 100).toFixed(2)}`
+
+      switchTab('overview')
+      document.getElementById('details-modal').classList.remove('hidden')
+      document.getElementById('details-modal').classList.add('flex')
+    } catch (error) {
+      alert('Erro ao carregar detalhes do afiliado')
+    }
+  }
+
+  function closeDetailsModal() {
+    document.getElementById('details-modal').classList.add('hidden')
+    document.getElementById('details-modal').classList.remove('flex')
+  }
+
+  async function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.remove('text-dourado', 'border-b-2', 'border-dourado')
+      btn.classList.add('text-text-muted')
+    })
+
+    document.querySelectorAll('.tab-content').forEach(content => {
+      content.classList.add('hidden')
+    })
+
+    const activeBtn = document.querySelector(`[data-tab="${tab}"]`)
+    activeBtn.classList.add('text-dourado', 'border-b-2', 'border-dourado')
+    activeBtn.classList.remove('text-text-muted')
+
+    document.getElementById(`tab-${tab}`).classList.remove('hidden')
+
+    if (tab === 'clicks') {
+      await loadClicks()
+    } else if (tab === 'conversions') {
+      await loadConversions()
+    }
+  }
+
+  async function loadClicks() {
+    try {
+      const response = await fetch(`/admin/api/affiliates/${currentAffiliateId}/clicks`)
+      const data = await response.json()
+
+      const tbody = document.getElementById('clicks-table')
+      if (data.clicks.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-text-muted">Nenhum clique registrado</td></tr>'
+        return
+      }
+
+      tbody.innerHTML = data.clicks.map(click => `
+        <tr class="border-t border-verde-principal/10">
+          <td class="px-4 py-3 text-text-light text-sm">${new Date(click.clicked_at).toLocaleString('pt-BR')}</td>
+          <td class="px-4 py-3 text-text-muted text-sm font-mono">${click.ip_address || '—'}</td>
+          <td class="px-4 py-3 text-text-muted text-xs">${click.user_agent || '—'}</td>
+        </tr>
+      `).join('')
+    } catch (error) {
+      console.error('Erro ao carregar cliques:', error)
+    }
+  }
+
+  async function loadConversions() {
+    try {
+      const response = await fetch(`/admin/api/affiliates/${currentAffiliateId}/conversions`)
+      const data = await response.json()
+
+      const tbody = document.getElementById('conversions-table')
+      if (data.conversions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-text-muted">Nenhuma conversão registrada</td></tr>'
+        return
+      }
+
+      tbody.innerHTML = data.conversions.map(conv => {
+        const statusLabel = {
+          pending: 'Pendente',
+          paid: 'Pago',
+          cancelled: 'Cancelado'
+        }[conv.status]
+        const statusColor = {
+          pending: 'text-dourado',
+          paid: 'text-verde-claro',
+          cancelled: 'text-vermelho'
+        }[conv.status]
+
+        return `
+          <tr class="border-t border-verde-principal/10">
+            <td class="px-4 py-3 text-text-light text-sm">${new Date(conv.created_at).toLocaleDateString('pt-BR')}</td>
+            <td class="px-4 py-3 text-text-muted text-sm font-mono">${conv.order_number || '—'}</td>
+            <td class="px-4 py-3">
+              <div class="text-text-light text-sm">${conv.user_name || '—'}</div>
+              <div class="text-text-muted text-xs">${conv.user_email || '—'}</div>
+            </td>
+            <td class="px-4 py-3 text-text-muted text-sm">${conv.product_title || '—'}</td>
+            <td class="px-4 py-3 text-verde-claro font-semibold text-sm">R$ ${(conv.commission_cents / 100).toFixed(2)}</td>
+            <td class="px-4 py-3">
+              <span class="${statusColor} font-semibold text-sm">${statusLabel}</span>
+            </td>
+          </tr>
+        `
+      }).join('')
+    } catch (error) {
+      console.error('Erro ao carregar conversões:', error)
+    }
+  }
+
+  async function deactivateAffiliate(id) {
+    if (!confirm('Tem certeza que deseja desativar este afiliado? Ele perderá acesso ao painel de afiliados.')) return
+
+    try {
+      const response = await fetch(`/admin/api/affiliates/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        alert('Afiliado desativado com sucesso!')
+        loadAffiliates()
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Erro ao desativar afiliado')
+      }
+    } catch (error) {
+      alert('Erro ao desativar afiliado')
+    }
+  }
+
+  document.getElementById('affiliate-form').addEventListener('submit', async (e) => {
+    e.preventDefault()
+
+    const data = {
+      user_id: document.getElementById('affiliate-user').value,
+      commission_pct: parseFloat(document.getElementById('affiliate-commission').value),
+    }
+
+    try {
+      const response = await fetch('/admin/api/affiliates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+
+      if (response.ok) {
+        alert('Afiliado criado com sucesso!')
+        closeAffiliateModal()
+        loadAffiliates()
+      } else {
+        const errorData = await response.json()
+        alert(errorData.error || 'Erro ao criar afiliado')
+      }
+    } catch (error) {
+      alert('Erro ao criar afiliado')
+    }
+  })
+
+  loadAffiliates()
 </script>
