@@ -160,9 +160,6 @@ if (!session?.profile || !isAdmin(session.profile)) {
             <button onclick="closeContentModal()" class="flex-1 bg-bg-dark hover:bg-white/5 text-text-light px-4 py-3 rounded-lg font-semibold transition-colors">
               Fechar
             </button>
-            <button onclick="saveContent()" class="flex-1 bg-verde-principal hover:bg-verde-claro text-white px-4 py-3 rounded-lg font-semibold transition-colors">
-              Salvar Alterações
-            </button>
           </div>
         </div>
       </div>
@@ -190,7 +187,7 @@ if (!session?.profile || !isAdmin(session.profile)) {
     } catch (error) {
       document.getElementById('products-grid').innerHTML = `
         <div class="col-span-full text-center py-12">
-          <Icon name="alert-circle" size={48} class="text-vermelho mx-auto mb-4" />
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-vermelho mx-auto mb-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
           <p class="text-vermelho font-medium">Erro ao carregar produtos</p>
         </div>
       `
@@ -203,7 +200,7 @@ if (!session?.profile || !isAdmin(session.profile)) {
     if (!products || products.length === 0) {
       grid.innerHTML = `
         <div class="col-span-full text-center py-12">
-          <Icon name="package" size={48} class="text-text-muted/30 mx-auto mb-4" />
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-text-muted/30 mx-auto mb-4"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
           <p class="text-text-muted">Nenhum produto cadastrado</p>
         </div>
       `
@@ -211,27 +208,27 @@ if (!session?.profile || !isAdmin(session.profile)) {
     }
 
     const statusMap = {
-      draft: { label: 'Rascunho', variant: 'neutral' },
-      published: { label: 'Publicado', variant: 'success' },
-      archived: { label: 'Arquivado', variant: 'error' },
+      draft: { label: 'Rascunho', color: 'bg-white/10 text-text-muted' },
+      published: { label: 'Publicado', color: 'bg-verde-claro/10 text-verde-claro' },
+      archived: { label: 'Arquivado', color: 'bg-vermelho/10 text-vermelho' },
     }
 
     grid.innerHTML = products.map(product => {
-      const status = statusMap[product.status] || { label: product.status, variant: 'neutral' }
+      const status = statusMap[product.status] || { label: product.status, color: 'bg-white/10 text-text-muted' }
 
       return `
-        <Card padding="none" class="overflow-hidden hover:shadow-lg transition-shadow">
+        <div class="bg-azul-profundo rounded-xl border border-white/10 overflow-hidden hover:shadow-lg transition-shadow">
           ${product.cover_url ? `
             <img src="${product.cover_url}" alt="${product.title}" class="w-full h-48 object-cover" />
           ` : `
             <div class="w-full h-48 bg-bg-dark flex items-center justify-center">
-              <Icon name="package" size={48} class="text-text-muted/30" />
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-text-muted/30"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
             </div>
           `}
           <div class="p-6">
             <div class="flex justify-between items-start mb-2">
               <h3 class="text-xl font-display font-bold text-dourado">${product.title}</h3>
-              <Badge variant={status.variant}>{status.label}</Badge>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.color}">${status.label}</span>
             </div>
             <p class="text-text-muted text-sm mb-4 line-clamp-2">${product.description || 'Sem descrição'}</p>
             <div class="grid grid-cols-3 gap-2 mb-4 text-center">
@@ -260,16 +257,16 @@ if (!session?.profile || !isAdmin(session.profile)) {
               </button>
               ${product.status === 'published' ? `
                 <button onclick="unpublishProduct('${product.id}')" class="bg-vermelho/20 hover:bg-vermelho/30 text-vermelho px-4 py-2 rounded-lg text-sm transition-colors">
-                  <Icon name="x" size={14} />
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
               ` : `
                 <button onclick="publishProduct('${product.id}')" class="bg-verde-principal/20 hover:bg-verde-principal/30 text-verde-claro px-4 py-2 rounded-lg text-sm transition-colors">
-                  <Icon name="check" size={14} />
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
                 </button>
               `}
             </div>
           </div>
-        </Card>
+        </div>
       `
     }).join('')
   }
@@ -345,6 +342,18 @@ if (!session?.profile || !isAdmin(session.profile)) {
 
   function renderModules(modules) {
     const container = document.getElementById('modules-container')
+    
+    if (!modules || modules.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-8 text-text-muted">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-4 text-text-muted/30"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <p>Nenhum módulo cadastrado</p>
+          <p class="text-sm mt-1">Clique em "Adicionar Módulo" para começar</p>
+        </div>
+      `
+      return
+    }
+    
     container.innerHTML = modules.map((module) => `
       <div class="bg-bg-dark rounded-lg p-4" data-module-id="${module.id}">
         <div class="flex justify-between items-center mb-3">
@@ -356,10 +365,10 @@ if (!session?.profile || !isAdmin(session.profile)) {
           />
           <div class="flex gap-2">
             <button onclick="addLesson('${module.id}')" class="text-verde-claro hover:text-verde-claro/80 text-sm font-medium flex items-center gap-1">
-              <Icon name="plus" size={14} /> Aula
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Aula
             </button>
             <button onclick="removeModule('${module.id}')" class="text-vermelho hover:text-vermelho/80 text-sm font-medium">
-              <Icon name="trash-2" size={14} />
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
             </button>
           </div>
         </div>
@@ -381,7 +390,7 @@ if (!session?.profile || !isAdmin(session.profile)) {
                 onchange="updateLessonVideo('${module.id}', '${lesson.id}', this.value)"
               />
               <button onclick="removeLesson('${module.id}', '${lesson.id}')" class="text-vermelho hover:text-vermelho/80">
-                <Icon name="x" size={14} />
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
               </button>
             </div>
           `).join('')}
@@ -429,11 +438,12 @@ if (!session?.profile || !isAdmin(session.profile)) {
 
   async function updateModuleTitle(moduleId, title) {
     try {
-      await fetch(`/admin/api/products/${currentProductId}/modules/${moduleId}`, {
+      const response = await fetch(`/admin/api/products/${currentProductId}/modules/${moduleId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title }),
       })
+      if (!response.ok) throw new Error()
     } catch (error) {
       window.showToast('error', 'Erro ao atualizar módulo')
     }
@@ -478,11 +488,12 @@ if (!session?.profile || !isAdmin(session.profile)) {
 
   async function updateLessonTitle(moduleId, lessonId, title) {
     try {
-      await fetch(`/admin/api/products/${currentProductId}/modules/${moduleId}/lessons/${lessonId}`, {
+      const response = await fetch(`/admin/api/products/${currentProductId}/modules/${moduleId}/lessons/${lessonId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title }),
       })
+      if (!response.ok) throw new Error()
     } catch (error) {
       window.showToast('error', 'Erro ao atualizar aula')
     }
@@ -490,11 +501,12 @@ if (!session?.profile || !isAdmin(session.profile)) {
 
   async function updateLessonVideo(moduleId, lessonId, video_url) {
     try {
-      await fetch(`/admin/api/products/${currentProductId}/modules/${moduleId}/lessons/${lessonId}`, {
+      const response = await fetch(`/admin/api/products/${currentProductId}/modules/${moduleId}/lessons/${lessonId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ video_url }),
       })
+      if (!response.ok) throw new Error()
     } catch (error) {
       window.showToast('error', 'Erro ao atualizar vídeo')
     }
