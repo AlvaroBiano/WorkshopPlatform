@@ -1,6 +1,6 @@
 ---
 import StudentLayout from '../../../layouts/StudentLayout.astro'
-import { supabaseAdmin } from '../../../lib/supabase-server'
+import { db } from '../../../lib/turso'
 
 const user = Astro.locals.user
 if (!user) return Astro.redirect('/login')
@@ -8,45 +8,47 @@ if (!user) return Astro.redirect('/login')
 const slug = Astro.params.slug
 const requestedLessonId = Astro.url.searchParams.get('lesson')
 
-const { data: product } = await supabaseAdmin
-  .from('products')
-  .select(`
-    *,
-    modules(
-      id, title, sort_order,
-      lessons(id, title, sort_order, type, vimeo_id, youtube_url, file_url, duration_sec, description, is_free)
-    )
-  `)
-  .eq('slug', slug)
-  .single()
+const productResult = await db.execute({
+  sql: 'SELECT * FROM products WHERE slug = ?',
+  args: [slug],
+})
 
-if (!product) return new Response('Não encontrado', { status: 404 })
+if (productResult.rows.length === 0) return new Response('Não encontrado', { status: 404 })
+const product = productResult.rows[0] as any
 
-const { data: access } = await supabaseAdmin
-  .from('product_access')
-  .select('*')
-  .eq('user_id', user.id)
-  .eq('product_id', product.id)
-  .single()
+const accessResult = await db.execute({
+  sql: 'SELECT * FROM product_access WHERE user_id = ? AND product_id = ?',
+  args: [user.id, product.id],
+})
 
-if (!access) return Astro.redirect('/student?error=no_access')
+if (accessResult.rows.length === 0) return Astro.redirect('/student?error=no_access')
 
-const { data: progress } = await supabaseAdmin
-  .from('progress')
-  .select('*')
-  .eq('user_id', user.id)
+const modulesResult = await db.execute({
+  sql: 'SELECT * FROM modules WHERE product_id = ? ORDER BY sort_order ASC',
+  args: [product.id],
+})
+const modulesList = modulesResult.rows as any[]
 
-const progressMap = Object.fromEntries(
-  (progress || []).map((p: any) => [p.lesson_id, p])
+const lessonsResult = modulesList.length > 0
+  ? await db.execute({
+      sql: `SELECT * FROM lessons WHERE module_id IN (${modulesList.map(() => '?').join(',')}) ORDER BY sort_order ASC`,
+      args: modulesList.map(m => m.id),
+    })
+  : { rows: [] }
+const lessonsList = lessonsResult.rows as any[]
+
+const progressResult = await db.execute({
+  sql: 'SELECT * FROM progress WHERE user_id = ?',
+  args: [user.id],
+})
+const progressList = progressResult.rows as any[]
+const progressMap = Object.fromEntries(progressList.map((p: any) => [p.lesson_id, p]))
+
+const allLessons = modulesList.flatMap((m: any) =>
+  lessonsList
+    .filter((l: any) => l.module_id === m.id)
+    .map((l: any) => ({ ...l, moduleTitle: m.title, moduleId: m.id }))
 )
-
-const allLessons = (product.modules || [])
-  .sort((a: any, b: any) => a.sort_order - b.sort_order)
-  .flatMap((m: any) =>
-    m.lessons
-      .sort((a: any, b: any) => a.sort_order - b.sort_order)
-      .map((l: any) => ({ ...l, moduleTitle: m.title, moduleId: m.id }))
-  )
 
 let currentLesson = requestedLessonId
   ? allLessons.find((l: any) => l.id === requestedLessonId)
@@ -58,11 +60,11 @@ const completedCount = allLessons.filter((l: any) => progressMap[l.id]?.complete
 const totalCount = allLessons.length
 ---
 
-<StudentLayout title={`${currentLesson.title} | WORKSHOP`}>
+<StudentLayout title={`${currentLesson?.title || 'Aula'} | WORKSHOP`}>
   <div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
     <div>
       <div class="aspect-video bg-black rounded-xl overflow-hidden mb-4">
-        {currentLesson.type === 'vimeo' && currentLesson.vimeo_id ? (
+        {currentLesson?.type === 'vimeo' && currentLesson?.vimeo_id ? (
           <iframe
             src={`https://player.vimeo.com/video/${currentLesson.vimeo_id}?autoplay=1`}
             class="w-full h-full"
@@ -70,7 +72,7 @@ const totalCount = allLessons.length
             allow="autoplay; fullscreen; picture-in-picture"
             allowfullscreen
           ></iframe>
-        ) : currentLesson.type === 'youtube' && currentLesson.youtube_url ? (
+        ) : currentLesson?.type === 'youtube' && currentLesson?.youtube_url ? (
           <iframe
             src={`https://www.youtube.com/embed/${new URL(currentLesson.youtube_url).searchParams.get('v')}?autoplay=1`}
             class="w-full h-full"
@@ -78,25 +80,27 @@ const totalCount = allLessons.length
             allow="autoplay; fullscreen"
             allowfullscreen
           ></iframe>
-        ) : currentLesson.type === 'pdf' && currentLesson.file_url ? (
+        ) : currentLesson?.type === 'pdf' && currentLesson?.file_url ? (
           <iframe src={currentLesson.file_url} class="w-full h-full"></iframe>
+        ) : currentLesson?.video_url ? (
+          <video src={currentLesson.video_url} controls autoplay class="w-full h-full"></video>
         ) : (
           <div class="w-full h-full flex items-center justify-center text-text-muted">
-            <p>Conteúdo: {currentLesson.type}</p>
+            <p>Conteúdo: {currentLesson?.type || 'video'}</p>
           </div>
         )}
       </div>
 
       <div class="card p-6">
-        <h1 class="text-2xl font-display font-bold text-dourado mb-2">{currentLesson.title}</h1>
-        {currentLesson.description && (
+        <h1 class="text-2xl font-display font-bold text-dourado mb-2">{currentLesson?.title}</h1>
+        {currentLesson?.description && (
           <p class="text-text-muted mb-4">{currentLesson.description}</p>
         )}
         <div class="flex flex-wrap gap-3">
           <button id="markComplete" class="btn btn-primary">
-            {progressMap[currentLesson.id]?.completed ? '✓ Concluída' : '✓ Marcar como concluída'}
+            {progressMap[currentLesson?.id]?.completed ? '✓ Concluída' : '✓ Marcar como concluída'}
           </button>
-          {currentLesson.file_url && (
+          {currentLesson?.file_url && (
             <a href={currentLesson.file_url} target="_blank" class="btn btn-secondary">
               Baixar Material
             </a>
@@ -119,16 +123,16 @@ const totalCount = allLessons.length
         </div>
       </div>
 
-      {(product.modules || []).sort((a: any, b: any) => a.sort_order - b.sort_order).map((m: any, mi: number) => (
+      {modulesList.map((m: any, mi: number) => (
         <div>
           <div class="px-4 py-3 bg-white/5 sticky top-[89px]">
             <h3 class="font-semibold text-sm">
               <span class="text-dourado">M{mi + 1}</span> · {m.title}
             </h3>
           </div>
-          {m.lessons.sort((a: any, b: any) => a.sort_order - b.sort_order).map((l: any, li: number) => {
+          {lessonsList.filter((l: any) => l.module_id === m.id).map((l: any, li: number) => {
             const prog = progressMap[l.id]
-            const isCurrent = l.id === currentLesson.id
+            const isCurrent = l.id === currentLesson?.id
             return (
               <a
                 href={`/student/course/${slug}?lesson=${l.id}`}

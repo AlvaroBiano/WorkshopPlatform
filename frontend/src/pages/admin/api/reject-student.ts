@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { supabaseAdmin } from '../../../lib/supabase-server'
+import { db } from '../../../lib/turso'
 import { getSessionFromCookies, isAdmin } from '../../../lib/auth'
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -9,27 +9,28 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   const { id, reason } = await request.json()
-  if (!id) return new Response('id is required', { status: 400 })
+  if (!id) return new Response(JSON.stringify({ error: 'ID é obrigatório' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
 
-  await supabaseAdmin
-    .from('pending_registrations')
-    .update({
-      status: 'rejected',
-      reviewed_by: session.profile.id,
-      reviewed_at: new Date().toISOString(),
-      rejection_reason: reason || null,
+  try {
+    await db.execute({
+      sql: `UPDATE pending_registrations SET status = 'rejected', reviewed_by = ?, reviewed_at = datetime('now'), rejection_reason = ? WHERE id = ?`,
+      args: [session.profile.id, reason || null, id],
     })
-    .eq('id', id)
 
-  await supabaseAdmin.from('audit_log').insert({
-    user_id: session.profile.id,
-    action: 'REJECT_STUDENT',
-    entity_type: 'pending_registrations',
-    entity_id: id,
-    details: { reason },
-  })
+    await db.execute({
+      sql: `INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details, ip_address, created_at)
+            VALUES (?, ?, 'REJECT_STUDENT', 'pending_registrations', ?, ?, ?, datetime('now'))`,
+      args: [crypto.randomUUID(), session.profile.id, id, JSON.stringify({ reason }), request.headers.get('x-forwarded-for') || 'unknown'],
+    })
 
-  return new Response(JSON.stringify({ success: true }), {
-    headers: { 'Content-Type': 'application/json' },
-  })
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { 'Content-Type': 'application/json' },
+    })
+  } catch (error) {
+    console.error('Erro ao rejeitar aluno:', error)
+    return new Response(JSON.stringify({ error: 'Erro ao rejeitar aluno' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
 }

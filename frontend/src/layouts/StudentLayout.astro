@@ -1,6 +1,6 @@
 ---
 import '../styles/global.css'
-import { supabaseAdmin } from '../lib/supabase-server'
+import { db } from '../lib/turso'
 import Icon from '../components/ui/Icon.astro'
 import Toast from '../components/ui/Toast.astro'
 
@@ -15,15 +15,19 @@ if (!user) {
   return Astro.redirect('/login')
 }
 
-const { data: notifications } = await supabaseAdmin
-  .from('notifications')
-  .select('*')
-  .eq('user_id', user.id)
-  .is('read_at', null)
-  .order('created_at', { ascending: false })
-  .limit(10)
+let unreadCount = 0
+let notifications: any[] = []
 
-const unreadCount = notifications?.length || 0
+try {
+  const result = await db.execute({
+    sql: 'SELECT * FROM notifications WHERE user_id = ? AND read_at IS NULL ORDER BY created_at DESC LIMIT 10',
+    args: [user.id],
+  })
+  notifications = result.rows as any[]
+  unreadCount = notifications.length
+} catch (error) {
+  console.error('Erro ao carregar notificações:', error)
+}
 ---
 
 <!doctype html>
@@ -61,7 +65,7 @@ const unreadCount = notifications?.length || 0
 
             <div id="notifPanel" class="hidden absolute right-0 top-12 w-80 bg-bg-card border border-white/10 rounded-xl shadow-xl p-4 max-h-96 overflow-y-auto">
               <h3 class="font-bold mb-3 text-dourado">Notificações</h3>
-              {notifications?.length ? notifications.map(n => (
+              {notifications.length ? notifications.map((n: any) => (
                 <div class="py-2 border-b border-white/5 last:border-0">
                   <p class="font-semibold text-sm">{n.title}</p>
                   <p class="text-xs text-text-muted">{n.body}</p>

@@ -14,7 +14,6 @@ import AuthLayout from '../layouts/AuthLayout.astro'
 
       <div class="card p-8">
         <div class="text-center mb-6">
-          <span class="text-4xl">👋</span>
           <h2 class="text-2xl font-display text-dourado mt-3">Bem-vindo(a)!</h2>
           <p class="text-text-muted mt-2">
             Para sua segurança, crie uma nova senha diferente do seu CPF.
@@ -47,7 +46,7 @@ import AuthLayout from '../layouts/AuthLayout.astro'
             />
           </div>
 
-          <div id="errorMsg" class="hidden p-3 rounded-lg text-sm bg-red-500/10 border border-red-500/30 text-red-400"></div>
+          <div id="errorMsg" class="hidden p-3 rounded-lg text-sm bg-vermelho/10 border border-vermelho/30 text-vermelho"></div>
 
           <button type="submit" id="submitBtn" class="btn btn-primary w-full">
             <span id="btnText">Criar Senha e Continuar</span>
@@ -60,8 +59,6 @@ import AuthLayout from '../layouts/AuthLayout.astro'
 </AuthLayout>
 
 <script>
-  import { supabase } from '../lib/supabase'
-
   const form = document.getElementById('firstAccessForm') as HTMLFormElement
   const newPassword = document.getElementById('new_password') as HTMLInputElement
   const confirmPassword = document.getElementById('confirm_password') as HTMLInputElement
@@ -91,29 +88,16 @@ import AuthLayout from '../layouts/AuthLayout.astro'
     submitBtn.disabled = true
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword.value,
+      const response = await fetch('/api/first-access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_password: newPassword.value }),
       })
 
-      if (error) throw error
+      const data = await response.json()
 
-      const accessToken = document.cookie.split(';').find(c => c.trim().startsWith('sb-access-token='))?.split('=')[1]
-
-      if (accessToken) {
-        const { createClient } = await import('@supabase/supabase-js')
-        const adminClient = createClient(
-          import.meta.env.PUBLIC_SUPABASE_URL,
-          import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-          { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
-        )
-
-        const { data: { user } } = await adminClient.auth.getUser()
-        if (user) {
-          await adminClient
-            .from('users')
-            .update({ must_change_password: false, first_login: false })
-            .eq('auth_id', user.id)
-        }
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao atualizar senha')
       }
 
       window.location.href = '/student'

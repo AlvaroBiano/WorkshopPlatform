@@ -15,6 +15,7 @@ export interface UserProfile {
   ban_reason: string | null
   last_login_at: string | null
   created_at: string
+  whatsapp: string | null
 }
 
 export async function authenticateUser(email: string, password: string): Promise<UserProfile | null> {
@@ -45,6 +46,7 @@ export async function authenticateUser(email: string, password: string): Promise
     ban_reason: user.ban_reason,
     last_login_at: user.last_login_at,
     created_at: user.created_at,
+    whatsapp: user.whatsapp || null,
   }
 }
 
@@ -100,6 +102,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     ban_reason: user.ban_reason,
     last_login_at: user.last_login_at,
     created_at: user.created_at,
+    whatsapp: user.whatsapp || null,
   }
 }
 

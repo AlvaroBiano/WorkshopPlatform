@@ -1,65 +1,79 @@
 ---
 import StudentLayout from '../../layouts/StudentLayout.astro'
-import { supabaseAdmin } from '../../lib/supabase-server'
+import { db } from '../../lib/turso'
 
 const user = Astro.locals.user
 if (!user) return Astro.redirect('/login')
 
-const { data: access } = await supabaseAdmin
-  .from('product_access')
-  .select(`
-    product:products(
-      id, title, slug, description, cover_url, type,
-      modules(id, title, sort_order,
-        lessons(id, duration_sec)
-      )
-    )
-  `)
-  .eq('user_id', user.id)
+const accessResult = await db.execute({
+  sql: `SELECT pa.product_id, p.id, p.title, p.slug, p.description, p.cover_url, p.type
+        FROM product_access pa
+        JOIN products p ON pa.product_id = p.id
+        WHERE pa.user_id = ?`,
+  args: [user.id],
+})
 
-const { data: progress } = await supabaseAdmin
-  .from('progress')
-  .select('lesson_id, completed, watched_sec')
-  .eq('user_id', user.id)
+const accessList = accessResult.rows as any[]
 
-const { data: continueWatching } = await supabaseAdmin
-  .from('progress')
-  .select(`
-    lesson_id,
-    watched_sec,
-    last_seen_at,
-    lesson:lessons(
-      id, title, duration_sec,
-      module:modules(
-        id, title,
-        product:products(id, title, slug, cover_url)
-      )
-    )
-  `)
-  .eq('user_id', user.id)
-  .eq('completed', false)
-  .gt('watched_sec', 0)
-  .order('last_seen_at', { ascending: false })
-  .limit(5)
+const modulesResult = accessList.length > 0
+  ? await db.execute({
+      sql: `SELECT m.id, m.product_id, m.title, m.sort_order FROM modules m WHERE m.product_id IN (${accessList.map(() => '?').join(',')})`,
+      args: accessList.map(a => a.product_id),
+    })
+  : { rows: [] }
 
-const progressMap = Object.fromEntries(
-  (progress || []).map(p => [p.lesson_id, p])
-)
+const modulesList = modulesResult.rows as any[]
 
-const courses = (access || []).map(a => {
-  const product = a.product as any
-  const allLessons = product.modules?.flatMap((m: any) => m.lessons) || []
-  const totalDuration = allLessons.reduce((sum: number, l: any) => sum + (l.duration_sec || 0), 0)
-  const watchedDuration = (progress || [])
-    .filter(p => allLessons.some((l: any) => l.id === p.lesson_id))
+const lessonsResult = modulesList.length > 0
+  ? await db.execute({
+      sql: `SELECT l.id, l.module_id, l.duration_sec FROM lessons l WHERE l.module_id IN (${modulesList.map(() => '?').join(',')})`,
+      args: modulesList.map(m => m.id),
+    })
+  : { rows: [] }
+
+const lessonsList = lessonsResult.rows as any[]
+
+const progressResult = await db.execute({
+  sql: 'SELECT lesson_id, completed, watched_sec, last_seen_at FROM progress WHERE user_id = ?',
+  args: [user.id],
+})
+
+const progressList = progressResult.rows as any[]
+const progressMap = Object.fromEntries(progressList.map(p => [p.lesson_id, p]))
+
+const courses = accessList.map(product => {
+  const productModules = modulesList.filter(m => m.product_id === product.id)
+  const allLessons = productModules.flatMap(m => lessonsList.filter(l => l.module_id === m.id))
+  const totalDuration = allLessons.reduce((sum, l) => sum + (l.duration_sec || 0), 0)
+  const watchedDuration = progressList
+    .filter(p => allLessons.some(l => l.id === p.lesson_id))
     .reduce((sum, p) => sum + (p.watched_sec || 0), 0)
   const percent = totalDuration ? Math.round((watchedDuration / totalDuration) * 100) : 0
   return { ...product, progress: percent }
 })
+
+let continueWatching: any[] = []
+try {
+  const cwResult = await db.execute({
+    sql: `SELECT p.lesson_id, p.watched_sec, p.last_seen_at, l.title as lesson_title, l.duration_sec,
+                 m.title as module_title, m.product_id, pr.title as product_title, pr.slug, pr.cover_url
+          FROM progress p
+          JOIN lessons l ON p.lesson_id = l.id
+          JOIN modules m ON l.module_id = m.id
+          JOIN products pr ON m.product_id = pr.id
+          JOIN product_access pa ON pa.user_id = p.user_id AND pa.product_id = pr.id
+          WHERE p.user_id = ? AND p.completed = 0 AND p.watched_sec > 0
+          ORDER BY p.last_seen_at DESC LIMIT 5`,
+    args: [user.id],
+  })
+  continueWatching = cwResult.rows as any[]
+} catch (error) {
+  console.error('Erro ao carregar continue assistindo:', error)
+}
 ---
 
 <StudentLayout title="Meus Cursos | WORKSHOP">
-  {continueWatching && continueWatching.length > 0 && (
+  {continueWatching.length > 0 && (
     <section class="mb-12">
       <h2 class="text-2xl font-display font-bold mb-4 flex items-center gap-2 text-dourado">
         Continue assistindo
@@ -67,13 +81,13 @@ const courses = (access || []).map(a => {
       <div class="flex gap-4 overflow-x-auto pb-4">
         {continueWatching.map((cw: any) => (
           <a
-            href={`/student/course/${cw.lesson.module.product.slug}?lesson=${cw.lesson_id}`}
+            href={`/student/course/${cw.slug}?lesson=${cw.lesson_id}`}
             class="flex-shrink-0 w-80 card group relative overflow-hidden"
           >
             <div class="aspect-video bg-bg-card relative">
-              {cw.lesson.module.product.cover_url ? (
+              {cw.cover_url ? (
                 <img
-                  src={cw.lesson.module.product.cover_url}
+                  src={cw.cover_url}
                   alt=""
                   class="w-full h-full object-cover group-hover:scale-105 transition-transform"
                 />
@@ -84,12 +98,12 @@ const courses = (access || []).map(a => {
               )}
               <div class="absolute inset-0 bg-gradient-to-t from-bg-dark/90 to-transparent flex items-end p-4">
                 <div class="w-full">
-                  <p class="font-bold mb-1 text-sm">{cw.lesson.module.product.title}</p>
-                  <p class="text-xs text-text-muted mb-2">{cw.lesson.title}</p>
+                  <p class="font-bold mb-1 text-sm">{cw.product_title}</p>
+                  <p class="text-xs text-text-muted mb-2">{cw.lesson_title}</p>
                   <div class="h-1 bg-white/10 rounded overflow-hidden">
                     <div
                       class="h-full bg-dourado"
-                      style={`width: ${Math.min(100, ((cw.watched_sec || 0) / (cw.lesson.duration_sec || 1)) * 100)}%`}
+                      style={`width: ${Math.min(100, ((cw.watched_sec || 0) / (cw.duration_sec || 1)) * 100)}%`}
                     ></div>
                   </div>
                 </div>

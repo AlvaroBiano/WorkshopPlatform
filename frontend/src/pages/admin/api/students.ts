@@ -29,7 +29,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
   if (status === 'active') {
     whereClause += ' AND is_active = 1 AND banned_at IS NULL'
   } else if (status === 'inactive') {
-    whereClause += ' AND is_active = 0'
+    whereClause += ' AND is_active = 0 AND banned_at IS NULL'
   } else if (status === 'banned') {
     whereClause += ' AND banned_at IS NOT NULL'
   }
@@ -44,6 +44,18 @@ export const GET: APIRoute = async ({ request, cookies }) => {
   })
 
   const total = Number(countResult.rows[0]?.total || 0)
+
+  const statsResult = await db.execute({
+    sql: `SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN is_active = 1 AND banned_at IS NULL THEN 1 ELSE 0 END) as active,
+      SUM(CASE WHEN is_active = 0 AND banned_at IS NULL THEN 1 ELSE 0 END) as inactive,
+      SUM(CASE WHEN banned_at IS NOT NULL THEN 1 ELSE 0 END) as banned
+      FROM users WHERE role = 'student'`,
+    args: [],
+  })
+
+  const stats = statsResult.rows[0] as any
 
   const studentsResult = await db.execute({
     sql: `
@@ -66,6 +78,12 @@ export const GET: APIRoute = async ({ request, cookies }) => {
     page,
     limit,
     totalPages: Math.ceil(total / limit),
+    stats: {
+      total: Number(stats.total || 0),
+      active: Number(stats.active || 0),
+      inactive: Number(stats.inactive || 0),
+      banned: Number(stats.banned || 0),
+    },
   }), {
     headers: { 'Content-Type': 'application/json' },
   })

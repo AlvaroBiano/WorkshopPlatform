@@ -1,15 +1,20 @@
 ---
 import StudentLayout from '../../layouts/StudentLayout.astro'
-import { supabaseAdmin } from '../../lib/supabase-server'
+import { db } from '../../lib/turso'
 
 const user = Astro.locals.user
 if (!user) return Astro.redirect('/login')
 
-const { data: devices } = await supabaseAdmin
-  .from('devices')
-  .select('*')
-  .eq('user_id', user.id)
-  .order('registered_at', { ascending: false })
+let devices: any[] = []
+try {
+  const result = await db.execute({
+    sql: 'SELECT * FROM devices WHERE user_id = ? ORDER BY registered_at DESC',
+    args: [user.id],
+  })
+  devices = result.rows as any[]
+} catch (error) {
+  console.error('Erro ao carregar dispositivos:', error)
+}
 ---
 
 <StudentLayout title="Meu Perfil | WORKSHOP">
@@ -40,11 +45,11 @@ const { data: devices } = await supabaseAdmin
         Máximo de 2 dispositivos autorizados.
       </p>
       <div class="space-y-3">
-        {(devices || []).map((d: any) => (
+        {devices.map((d: any) => (
           <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg">
             <div>
               <p class="font-semibold text-sm">{d.device_name}</p>
-              <p class="text-xs text-text-muted">{d.os} · {d.browser}</p>
+              <p class="text-xs text-text-muted">{d.os || ''} · {d.browser || ''}</p>
             </div>
             <span class:list={[
               'px-2 py-1 rounded text-xs',
@@ -54,7 +59,7 @@ const { data: devices } = await supabaseAdmin
             </span>
           </div>
         ))}
-        {(!devices || devices.length === 0) && (
+        {devices.length === 0 && (
           <p class="text-text-muted text-sm">Nenhum dispositivo registrado</p>
         )}
       </div>

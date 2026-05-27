@@ -270,7 +270,7 @@ if (!session?.profile || !isAdmin(session.profile)) {
         <tr>
           <td colspan="7" class="px-6 py-12 text-center">
             <div class="flex flex-col items-center">
-              <Icon name="alert-circle" size={48} class="text-vermelho mb-4" />
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-vermelho mb-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
               <p class="text-vermelho font-medium mb-2">Erro ao carregar alunos</p>
               <p class="text-text-muted text-sm">${error.message}</p>
               <button onclick="loadStudents()" class="mt-4 px-4 py-2 bg-dourado/10 text-dourado rounded-lg hover:bg-dourado/20 transition-colors">
@@ -291,7 +291,7 @@ if (!session?.profile || !isAdmin(session.profile)) {
         <tr>
           <td colspan="7" class="px-6 py-12 text-center">
             <div class="flex flex-col items-center">
-              <Icon name="users" size={48} class="text-text-muted/30 mb-4" />
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-text-muted/30 mb-4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               <p class="text-text-muted">Nenhum aluno encontrado</p>
             </div>
           </td>
@@ -303,20 +303,16 @@ if (!session?.profile || !isAdmin(session.profile)) {
     tbody.innerHTML = students.map(student => {
       const status = student.banned_at ? 'banned' : (student.is_active ? 'active' : 'inactive')
       const statusBadge = {
-        active: '<Badge variant="success">Ativo</Badge>',
-        inactive: '<Badge variant="neutral">Inativo</Badge>',
-        banned: '<Badge variant="error">Banido</Badge>',
+        active: '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-verde-claro/10 text-verde-claro">Ativo</span>',
+        inactive: '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/10 text-text-muted">Inativo</span>',
+        banned: '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-vermelho/10 text-vermelho">Banido</span>',
       }[status]
 
       const banReasonNote = student.ban_reason ? `<p class="text-xs text-vermelho mt-1">${student.ban_reason}</p>` : ''
 
       const actions = status === 'banned' 
-        ? `<button onclick="unbanStudent('${student.id}')" class="text-verde-claro hover:text-verde-claro/80 text-sm font-medium flex items-center gap-1">
-             <Icon name="user-check" size={14} /> Desbanir
-           </button>`
-        : `<button onclick="openBanModal('${student.id}')" class="text-vermelho hover:text-vermelho/80 text-sm font-medium flex items-center gap-1">
-             <Icon name="user-x" size={14} /> Banir
-           </button>`
+        ? `<button onclick="unbanStudent('${student.id}')" class="text-verde-claro hover:text-verde-claro/80 text-sm font-medium">Desbanir</button>`
+        : `<button onclick="openBanModal('${student.id}')" class="text-vermelho hover:text-vermelho/80 text-sm font-medium">Banir</button>`
 
       return `
         <tr class="border-t border-white/5 hover:bg-white/[0.02] transition-colors">
@@ -335,13 +331,9 @@ if (!session?.profile || !isAdmin(session.profile)) {
           <td class="px-6 py-4 text-text-muted">${new Date(student.created_at).toLocaleDateString('pt-BR')}</td>
           <td class="px-6 py-4">
             <div class="flex items-center gap-3">
-              <button onclick="openEditModal('${student.id}')" class="text-dourado hover:text-dourado/80 text-sm font-medium flex items-center gap-1">
-                <Icon name="edit" size={14} /> Editar
-              </button>
+              <button onclick="openEditModal('${student.id}')" class="text-dourado hover:text-dourado/80 text-sm font-medium">Editar</button>
               ${actions}
-              <button onclick="deleteStudent('${student.id}')" class="text-text-muted hover:text-vermelho text-sm font-medium flex items-center gap-1">
-                <Icon name="trash" size={14} /> Remover
-              </button>
+              <button onclick="deleteStudent('${student.id}')" class="text-text-muted hover:text-vermelho text-sm font-medium">Remover</button>
             </div>
           </td>
         </tr>
@@ -384,9 +376,11 @@ if (!session?.profile || !isAdmin(session.profile)) {
 
   function updateStats(data) {
     document.getElementById('stat-total').textContent = data.total
-    document.getElementById('stat-active').textContent = data.students.filter(s => s.is_active && !s.banned_at).length
-    document.getElementById('stat-inactive').textContent = data.students.filter(s => !s.is_active && !s.banned_at).length
-    document.getElementById('stat-banned').textContent = data.students.filter(s => s.banned_at).length
+    if (data.stats) {
+      document.getElementById('stat-active').textContent = data.stats.active || 0
+      document.getElementById('stat-inactive').textContent = data.stats.inactive || 0
+      document.getElementById('stat-banned').textContent = data.stats.banned || 0
+    }
   }
 
   function goToPage(page) {

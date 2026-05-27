@@ -15,7 +15,7 @@ import AuthLayout from '../layouts/AuthLayout.astro'
       <div class="card p-8">
         <h2 class="text-2xl font-display text-dourado mb-1">Recuperar Senha</h2>
         <p class="text-text-muted mb-6">
-          Informe seu e-mail e nossa equipe irá resetar sua senha para o CPF.
+          Informe seu e-mail e CPF. Sua senha será resetada para o CPF informado.
         </p>
 
         <form id="recoverForm" class="space-y-5">
@@ -24,12 +24,17 @@ import AuthLayout from '../layouts/AuthLayout.astro'
             <input id="email" type="email" required class="input" placeholder="seu@email.com" />
           </div>
 
-          <div id="errorMsg" class="hidden p-3 rounded-lg text-sm bg-red-500/10 border border-red-500/30 text-red-400"></div>
+          <div>
+            <label for="cpf" class="block text-sm font-medium text-text-muted mb-2">CPF (será sua nova senha)</label>
+            <input id="cpf" type="text" required class="input" placeholder="00000000000" maxlength="11" />
+          </div>
+
+          <div id="errorMsg" class="hidden p-3 rounded-lg text-sm bg-vermelho/10 border border-vermelho/30 text-vermelho"></div>
           <div id="successMsg" class="hidden p-3 rounded-lg text-sm bg-verde-claro/10 border border-verde-claro/30 text-verde-claro"></div>
 
           <button type="submit" id="submitBtn" class="btn btn-primary w-full">
-            <span id="btnText">Solicitar Recuperação</span>
-            <span id="btnLoading" class="hidden">Enviando...</span>
+            <span id="btnText">Resetar Senha</span>
+            <span id="btnLoading" class="hidden">Processando...</span>
           </button>
         </form>
 
@@ -58,9 +63,31 @@ import AuthLayout from '../layouts/AuthLayout.astro'
     submitBtn.disabled = true
 
     const email = (document.getElementById('email') as HTMLInputElement).value.trim().toLowerCase()
+    const cpf = (document.getElementById('cpf') as HTMLInputElement).value.replace(/\D/g, '')
+
+    if (cpf.length !== 11) {
+      errorMsg.textContent = 'CPF deve ter 11 dígitos'
+      errorMsg.classList.remove('hidden')
+      btnText.classList.remove('hidden')
+      btnLoading.classList.add('hidden')
+      submitBtn.disabled = false
+      return
+    }
 
     try {
-      successMsg.textContent = 'Solicitação enviada! Nossa equipe irá resetar sua senha e entrar em contato.'
+      const response = await fetch('/api/recuperar-senha', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, cpf }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao processar')
+      }
+
+      successMsg.textContent = data.message || 'Senha resetada com sucesso! Faça login com seu CPF.'
       successMsg.classList.remove('hidden')
       form.reset()
     } catch (err: any) {

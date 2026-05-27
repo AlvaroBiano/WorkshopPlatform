@@ -57,6 +57,10 @@ export async function onRequest(context: APIContext, next: () => Promise<Respons
     return context.redirect('/login?error=inactive')
   }
 
+  if (profile.must_change_password && pathname !== '/first-access' && pathname !== '/logout') {
+    return context.redirect('/first-access')
+  }
+
   if (ADMIN_ROUTES.some(r => pathname.startsWith(r)) && !isAdmin(profile)) {
     return context.redirect('/student')
   }
