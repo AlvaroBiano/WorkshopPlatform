@@ -400,7 +400,10 @@ if (!session?.profile || !isAdmin(session.profile)) {
   }
 
   async function addModule() {
-    alert('addModule started, product: ' + currentProductId)
+    if (!currentProductId) {
+      alert('Nenhum produto selecionado para adicionar módulo')
+      return
+    }
     const title = prompt('Título do módulo:')
     if (!title) return
 
