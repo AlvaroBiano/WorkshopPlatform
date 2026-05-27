@@ -400,9 +400,14 @@ if (!session?.profile || !isAdmin(session.profile)) {
   }
 
   async function addModule() {
-    console.log('addModule called, currentProductId:', currentProductId)
+    alert('addModule started, product: ' + currentProductId)
     const title = prompt('Título do módulo:')
     if (!title) return
+
+    if (!currentProductId) {
+      window.showToast('error', 'Nenhum produto selecionado')
+      return
+    }
 
     try {
       const response = await fetch(`/admin/api/products/${currentProductId}/modules`, {
@@ -410,16 +415,15 @@ if (!session?.profile || !isAdmin(session.profile)) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title }),
       })
-      console.log('addModule response:', response.status, await response.text().catch(() => ''))
 
       if (response.ok) {
         openContentEditor(currentProductId)
       } else {
-        window.showToast('error', 'Erro ao criar módulo')
+        const text = await response.text()
+        window.showToast('error', 'Erro ao criar módulo: ' + response.status + ' - ' + text)
       }
     } catch (error) {
-      console.error('addModule error:', error)
-      window.showToast('error', 'Erro ao criar módulo: ' + (error as Error).message)
+      window.showToast('error', 'Erro ao criar módulo')
     }
   }
 
@@ -602,6 +606,10 @@ if (!session?.profile || !isAdmin(session.profile)) {
   window.removeLesson = removeLesson
   window.updateLessonTitle = updateLessonTitle
   window.updateLessonVideo = updateLessonVideo
+  window.publishProduct = publishProduct
+  window.unpublishProduct = unpublishProduct
+  window.openContentEditor = openContentEditor
+  window.closeContentModal = closeContentModal
 
   loadProducts()
 </script>
