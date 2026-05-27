@@ -10,9 +10,4 @@ export default defineConfig({
     tailwind(),
   ],
   adapter: vercel(),
-  vite: {
-    ssr: {
-      noExternal: ['@supabase/supabase-js'],
-    },
-  },
 });
