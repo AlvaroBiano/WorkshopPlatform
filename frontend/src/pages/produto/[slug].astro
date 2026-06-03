@@ -7,6 +7,15 @@ import { db } from '@lib/turso'
 const slug = Astro.params.slug
 const user = Astro.locals.user
 
+const refParam = Astro.url.searchParams.get('ref')
+if (refParam) {
+  Astro.cookies.set('aff_ref', refParam, {
+    path: '/',
+    maxAge: 60 * 60 * 24 * 30,
+    sameSite: 'lax',
+  })
+}
+
 const productResult = await db.execute({
   sql: `SELECT p.*,
         (SELECT COALESCE(AVG(rating), 0) FROM reviews WHERE product_id = p.id AND status = 'approved') as avg_rating,

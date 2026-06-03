@@ -5,11 +5,18 @@ import Button from '../components/ui/Button.astro'
 import { db } from '@lib/turso'
 
 const refCode = Astro.url.searchParams.get('ref')
+if (refCode) {
+  Astro.cookies.set('aff_ref', refCode, {
+    path: '/',
+    maxAge: 60 * 60 * 24 * 30,
+    sameSite: 'lax',
+  })
+}
 
 let products: any[] = []
 try {
   const result = await db.execute({
-    sql: `SELECT p.*, 
+    sql: `SELECT p.*,
           (SELECT COALESCE(AVG(rating), 0) FROM reviews WHERE product_id = p.id AND status = 'approved') as avg_rating,
           (SELECT COUNT(*) FROM reviews WHERE product_id = p.id AND status = 'approved') as total_reviews
           FROM products p WHERE p.status = 'published' ORDER BY p.created_at DESC`,
@@ -63,7 +70,10 @@ try {
       ) : (
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {products.map(product => (
-            <a href={`/produto/${product.slug}`} class="bg-azul-profundo rounded-xl border border-white/10 overflow-hidden hover:shadow-lg transition-shadow group">
+            <a
+              href={`/produto/${product.slug}${refCode ? `?ref=${refCode}` : ''}`}
+              class="bg-azul-profundo rounded-xl border border-white/10 overflow-hidden hover:shadow-lg transition-shadow group"
+            >
               {product.cover_url ? (
                 <img src={product.cover_url} alt={product.title} class="w-full h-48 object-cover group-hover:scale-105 transition-transform" />
               ) : (
@@ -72,15 +82,21 @@ try {
                 </div>
               )}
               <div class="p-6">
-                <span class="text-xs text-text-muted uppercase tracking-wide">{product.type}</span>
+                <span class="text-xs text-text-muted uppercase tracking-wide">
+                  {product.type === 'course' ? 'Curso' : product.type === 'workshop' ? 'Workshop' : 'E-book'}
+                </span>
                 <h3 class="text-xl font-display font-bold text-dourado mt-1 mb-2">{product.title}</h3>
                 <p class="text-text-muted text-sm mb-4 line-clamp-2">{product.description || ''}</p>
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-1">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="text-dourado"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <span class="text-text-muted text-sm">{Number(product.avg_rating || 0).toFixed(1)} ({product.total_reviews || 0})</span>
+                    <span class="text-text-muted text-sm">
+                      {Number(product.avg_rating || 0).toFixed(1)} ({product.total_reviews || 0})
+                    </span>
                   </div>
-                  <span class="text-xl font-bold text-verde-claro">R$ {((product.price_cents || 0) / 100).toFixed(2)}</span>
+                  <span class="text-xl font-bold text-verde-claro">
+                    R$ {((product.price_cents || 0) / 100).toFixed(2)}
+                  </span>
                 </div>
               </div>
             </a>
