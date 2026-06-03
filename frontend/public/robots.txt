@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /student/
+Disallow: /affiliate/
+Disallow: /api/
+Disallow: /admin/api/
+Disallow: /student/api/
+Disallow: /affiliate/api/
+Disallow: /login
+Disallow: /cadastro
+Disallow: /first-access
+Disallow: /recuperar-senha
+Disallow: /logout
+
+Sitemap: /sitemap.xml
