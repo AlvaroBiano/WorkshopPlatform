@@ -13,6 +13,8 @@ const PUBLIC_ROUTES = [
   '/suporte',
   '/produto',
   '/checkout',
+  '/api/health',
+  '/sitemap.xml',
   '/workshop',
 ]
 const ADMIN_ROUTES = ['/admin']
@@ -68,7 +70,11 @@ export async function onRequest(context: APIContext, next: () => Promise<Respons
     return next()
   }
 
-  if (pathname.startsWith('/_') || pathname.startsWith('/.') || pathname.includes('.')) {
+  if (pathname.startsWith('/_') || pathname.startsWith('/.')) {
+    return next()
+  }
+
+  if (pathname === '/sitemap.xml' || pathname === '/robots.txt' || pathname === '/favicon.svg' || pathname === '/favicon.ico') {
     return next()
   }
 
