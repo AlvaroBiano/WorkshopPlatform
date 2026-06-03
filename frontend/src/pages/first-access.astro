@@ -1,5 +1,16 @@
 ---
 import AuthLayout from '../layouts/AuthLayout.astro'
+import { getSessionFromCookies } from '../lib/auth'
+
+const session = await getSessionFromCookies(Astro.cookies)
+if (!session?.profile) {
+  return Astro.redirect('/login')
+}
+
+const dashboardUrl =
+  session.profile.role === 'admin' || session.profile.role === 'super_admin' ? '/admin' :
+  session.profile.role === 'affiliate' ? '/affiliate/dashboard' :
+  '/student'
 ---
 
 <AuthLayout title="Primeiro Acesso | WORKSHOP">
@@ -100,7 +111,9 @@ import AuthLayout from '../layouts/AuthLayout.astro'
         throw new Error(data.error || 'Erro ao atualizar senha')
       }
 
-      window.location.href = '/student'
+      const role = data?.profile?.role
+      const url = role === 'admin' || role === 'super_admin' ? '/admin' : role === 'affiliate' ? '/affiliate/dashboard' : '/student'
+      window.location.href = url
     } catch (err: any) {
       errorMsg.textContent = err.message || 'Erro ao atualizar senha'
       errorMsg.classList.remove('hidden')

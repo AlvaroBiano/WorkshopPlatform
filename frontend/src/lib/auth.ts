@@ -2,7 +2,16 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { db } from './turso'
 
-const JWT_SECRET = process.env.JWT_SECRET || import.meta.env.JWT_SECRET || 'dev-secret-change-in-production'
+const JWT_SECRET = process.env.JWT_SECRET || import.meta.env.JWT_SECRET
+
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET é obrigatório em produção')
+  }
+  console.warn('⚠️  JWT_SECRET não definido, usando fallback de desenvolvimento. DEFINE em produção!')
+}
+
+const EFFECTIVE_JWT_SECRET = JWT_SECRET || 'dev-only-not-for-production-use'
 
 export interface UserProfile {
   id: string
@@ -57,14 +66,14 @@ export function generateToken(profile: UserProfile): string {
       email: profile.email,
       role: profile.role,
     },
-    JWT_SECRET,
+    EFFECTIVE_JWT_SECRET,
     { expiresIn: '7d' }
   )
 }
 
 export function verifyToken(token: string): UserProfile | null {
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as any
+    const payload = jwt.verify(token, EFFECTIVE_JWT_SECRET) as any
     return {
       id: payload.sub,
       email: payload.email,
