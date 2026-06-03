@@ -1,0 +1,111 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro'
+import Card from '../../components/ui/Card.astro'
+import Icon from '../../components/ui/Icon.astro'
+import { getSessionFromCookies, isAdmin } from '@lib/auth'
+
+const session = await getSessionFromCookies(Astro.cookies)
+if (!session?.profile || !isAdmin(session.profile)) {
+  return Astro.redirect('/login')
+}
+---
+
+<AdminLayout title="Moderação de Reviews">
+  <div class="mb-8 flex items-center justify-between">
+    <div>
+      <h1 class="text-3xl font-display font-bold text-dourado">Reviews Pendentes</h1>
+      <p class="text-text-muted text-sm mt-1">Aprove ou rejeite avaliações dos alunos</p>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="loadReviews('pending')" class="bg-dourado/20 text-dourado px-4 py-2 rounded-lg text-sm font-medium">Pendentes</button>
+      <button onclick="loadReviews('approved')" class="bg-bg-dark text-text-light px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/10">Aprovadas</button>
+      <button onclick="loadReviews('rejected')" class="bg-bg-dark text-text-light px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/10">Rejeitadas</button>
+    </div>
+  </div>
+
+  <div id="reviews-list" class="space-y-3">
+    <div class="p-6 text-center text-text-muted">Carregando...</div>
+  </div>
+</AdminLayout>
+
+<script>
+  let currentStatus = 'pending'
+
+  async function loadReviews(status: string) {
+    currentStatus = status
+    try {
+      const res = await fetch(`/admin/api/products/all/reviews?status=${status}`)
+      const data = await res.json()
+      render(data.reviews || [])
+    } catch (e) {
+      document.getElementById('reviews-list').innerHTML = '<div class="p-6 text-center text-vermelho">Erro</div>'
+    }
+  }
+
+  function render(reviews: any[]) {
+    const container = document.getElementById('reviews-list')
+    if (reviews.length === 0) {
+      container.innerHTML = `<div class="p-6 text-center text-text-muted bg-azul-profundo rounded-xl border border-white/10">Nenhum review ${currentStatus === 'pending' ? 'pendente' : currentStatus === 'approved' ? 'aprovado' : 'rejeitado'}</div>`
+      return
+    }
+
+    container.innerHTML = reviews.map(r => `
+      <div class="bg-azul-profundo rounded-xl border border-white/10 p-6">
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="font-bold text-dourado">${escapeHtml(r.full_name)}</span>
+              <span class="text-text-muted text-sm">·</span>
+              <span class="text-text-muted text-sm">${escapeHtml(r.product_title)}</span>
+            </div>
+            <div class="flex gap-1 mb-2">${renderStars(r.rating)}</div>
+            ${r.title ? `<h3 class="font-bold mb-1">${escapeHtml(r.title)}</h3>` : ''}
+            ${r.body ? `<p class="text-text-muted">${escapeHtml(r.body)}</p>` : ''}
+            <p class="text-text-muted text-xs mt-2">${new Date(r.created_at).toLocaleString('pt-BR')}</p>
+          </div>
+          ${r.status === 'pending' ? `
+            <div class="flex flex-col gap-2">
+              <button onclick="moderate('${r.id}', 'approved')" class="bg-verde-principal/20 text-verde-claro hover:bg-verde-principal/30 px-4 py-2 rounded-lg text-sm font-medium">Aprovar</button>
+              <button onclick="moderate('${r.id}', 'rejected')" class="bg-vermelho/20 text-vermelho hover:bg-vermelho/30 px-4 py-2 rounded-lg text-sm font-medium">Rejeitar</button>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `).join('')
+  }
+
+  function renderStars(rating: number): string {
+    let html = ''
+    for (let i = 0; i < 5; i++) {
+      html += `<svg width="16" height="16" viewBox="0 0 24 24" fill="${i < rating ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" class="text-dourado"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`
+    }
+    return html
+  }
+
+  function escapeHtml(text: any): string {
+    if (text == null) return ''
+    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+  }
+
+  async function moderate(id: string, status: string) {
+    try {
+      const res = await fetch('/admin/api/products/all/reviews', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      })
+      if (res.ok) {
+        window.showToast('success', `Review ${status === 'approved' ? 'aprovado' : 'rejeitado'}!`)
+        loadReviews(currentStatus)
+      } else {
+        window.showToast('error', 'Erro ao moderar')
+      }
+    } catch (e) {
+      window.showToast('error', 'Erro')
+    }
+  }
+
+  window.loadReviews = loadReviews
+  window.moderate = moderate
+  loadReviews('pending')
+</script>

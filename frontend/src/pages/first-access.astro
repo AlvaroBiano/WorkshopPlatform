@@ -1,6 +1,6 @@
 ---
 import AuthLayout from '../layouts/AuthLayout.astro'
-import { getSessionFromCookies } from '../lib/auth'
+import { getSessionFromCookies } from '@lib/auth'
 
 const session = await getSessionFromCookies(Astro.cookies)
 if (!session?.profile) {

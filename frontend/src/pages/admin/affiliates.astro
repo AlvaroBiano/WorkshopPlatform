@@ -4,7 +4,7 @@ import Card from '../../components/ui/Card.astro'
 import Badge from '../../components/ui/Badge.astro'
 import Icon from '../../components/ui/Icon.astro'
 import Button from '../../components/ui/Button.astro'
-import { getSessionFromCookies, isAdmin } from '../../lib/auth'
+import { getSessionFromCookies, isAdmin } from '@lib/auth'
 
 const session = await getSessionFromCookies(Astro.cookies)
 if (!session?.profile || !isAdmin(session.profile)) {

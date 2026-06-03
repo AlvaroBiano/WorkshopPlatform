@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro'
-import { db } from '../../lib/turso'
-import { getSessionFromCookies } from '../../lib/auth'
+import { db } from '@lib/turso'
+import { getSessionFromCookies } from '@lib/auth'
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   const session = await getSessionFromCookies(cookies)
@@ -11,7 +11,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File
-    const type = formData.get('type') as string || 'image'
 
     if (!file) {
       return new Response(JSON.stringify({ error: 'Nenhum arquivo enviado' }), { status: 400 })
@@ -32,7 +31,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     await db.execute({
       sql: `INSERT INTO attachments (id, filename, mime_type, size_bytes, data, storage_type, uploaded_by, created_at)
             VALUES (?, ?, ?, ?, ?, 'database', ?, datetime('now'))`,
-      args: [id, file.name, file.type, file.size, base64],
+      args: [id, file.name, file.type, file.size, base64, session.profile.id],
     })
 
     const dataUrl = `data:${file.type};base64,${base64}`

@@ -4,7 +4,7 @@ import Card from '../../components/ui/Card.astro'
 import Badge from '../../components/ui/Badge.astro'
 import Icon from '../../components/ui/Icon.astro'
 import Button from '../../components/ui/Button.astro'
-import { getSessionFromCookies, isAdmin } from '../../lib/auth'
+import { getSessionFromCookies, isAdmin } from '@lib/auth'
 
 const session = await getSessionFromCookies(Astro.cookies)
 if (!session?.profile || !isAdmin(session.profile)) {
@@ -463,8 +463,9 @@ if (!session?.profile || !isAdmin(session.profile)) {
     container.innerHTML = modules
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((m: any) => `
-        <div class="bg-bg-dark rounded-lg p-4 border border-white/5" data-module-id="${m.id}">
+        <div class="bg-bg-dark rounded-lg p-4 border border-white/5 cursor-move" data-module-id="${m.id}" draggable="true" ondragstart="moduleDragStart(event)" ondragover="event.preventDefault()" ondrop="moduleDrop(event)" ondragend="moduleDragEnd(event)">
           <div class="flex items-center gap-3 mb-3">
+            <span class="drag-handle text-text-muted cursor-grab">⋮⋮</span>
             <span class="w-8 h-8 rounded-full bg-dourado/20 text-dourado flex items-center justify-center font-bold text-sm">${m.sort_order}</span>
             <input
               type="text"
@@ -480,7 +481,7 @@ if (!session?.profile || !isAdmin(session.profile)) {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg> Remover
             </button>
           </div>
-          <div class="ml-4 space-y-1" data-module-id="${m.id}">
+          <div class="ml-4 space-y-1 lessons-list" data-module-id="${m.id}">
             ${(m.lessons || []).length === 0
               ? '<p class="text-xs text-text-muted italic py-2">Nenhuma aula cadastrada</p>'
               : (m.lessons || []).sort((a: any, b: any) => a.sort_order - b.sort_order).map((l: any) => renderLesson(l)).join('')
@@ -488,6 +489,103 @@ if (!session?.profile || !isAdmin(session.profile)) {
           </div>
         </div>
       `).join('')
+
+    initLessonDragDrop()
+  }
+
+  let draggedModuleId: string | null = null
+
+  function moduleDragStart(e: DragEvent) {
+    const el = (e.target as HTMLElement).closest('[data-module-id]') as HTMLElement
+    if (!el) return
+    draggedModuleId = el.dataset.moduleId || null
+    e.dataTransfer!.effectAllowed = 'move'
+    el.classList.add('opacity-50')
+  }
+
+  function moduleDragEnd(e: DragEvent) {
+    const el = (e.target as HTMLElement).closest('[data-module-id]') as HTMLElement
+    if (el) el.classList.remove('opacity-50')
+    draggedModuleId = null
+  }
+
+  async function moduleDrop(e: DragEvent) {
+    e.preventDefault()
+    const target = (e.target as HTMLElement).closest('[data-module-id]') as HTMLElement
+    if (!target || !draggedModuleId || target.dataset.moduleId === draggedModuleId) return
+
+    const container = document.getElementById('modules-container')
+    if (!container) return
+    target.parentNode?.insertBefore(document.querySelector(`[data-module-id="${draggedModuleId}"]`)!, target)
+
+    const newOrder = Array.from(container.querySelectorAll('[data-module-id]'))
+      .filter(el => !el.querySelector('.lessons-list'))
+      .map(el => (el as HTMLElement).dataset.moduleId)
+      .filter(Boolean) as string[]
+
+    try {
+      const response = await fetch(`/admin/api/products/${currentProductId}/modules/reorder`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ module_ids: newOrder }),
+      })
+      if (response.ok) {
+        window.showToast('success', 'Ordem atualizada!')
+        await openContentEditor(currentProductId)
+      } else {
+        window.showToast('error', 'Erro ao reordenar')
+      }
+    } catch (err) {
+      window.showToast('error', 'Erro ao reordenar')
+    }
+  }
+
+  function initLessonDragDrop() {
+    document.querySelectorAll('.lessons-list').forEach(list => {
+      let draggedId: string | null = null
+
+      list.querySelectorAll('[data-lesson-id]').forEach(el => {
+        ;(el as HTMLElement).draggable = true
+        el.addEventListener('dragstart', (e: any) => {
+          draggedId = (e.target as HTMLElement).dataset.lessonId || null
+          e.dataTransfer.effectAllowed = 'move'
+          ;(e.target as HTMLElement).classList.add('opacity-50')
+        })
+        el.addEventListener('dragend', (e: any) => {
+          ;(e.target as HTMLElement).classList.remove('opacity-50')
+        })
+        el.addEventListener('dragover', (e: any) => e.preventDefault())
+        el.addEventListener('drop', async (e: any) => {
+          e.preventDefault()
+          e.stopPropagation()
+          const targetEl = e.target.closest('[data-lesson-id]') as HTMLElement
+          if (!targetEl || !draggedId) return
+          const moduleId = (list as HTMLElement).dataset.moduleId
+          if (!moduleId) return
+
+          targetEl.parentNode?.insertBefore(list.querySelector(`[data-lesson-id="${draggedId}"]`)!, targetEl)
+
+          const newOrder = Array.from(list.querySelectorAll('[data-lesson-id]'))
+            .map(el => (el as HTMLElement).dataset.lessonId)
+            .filter(Boolean) as string[]
+
+          try {
+            const response = await fetch(`/admin/api/products/${currentProductId}/modules/${moduleId}/reorder`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ lesson_ids: newOrder }),
+            })
+            if (response.ok) {
+              window.showToast('success', 'Ordenação atualizada!')
+            } else {
+              window.showToast('error', 'Erro ao reordenar')
+            }
+          } catch (err) {
+            window.showToast('error', 'Erro ao reordenar')
+          }
+        })
+      })
+    })
   }
 
   function renderLesson(l: any): string {
@@ -663,6 +761,9 @@ if (!session?.profile || !isAdmin(session.profile)) {
   window.updateModuleTitle = updateModuleTitle
   window.deleteProduct = deleteProduct
   window.changeStatus = changeStatus
+  window.moduleDragStart = moduleDragStart
+  window.moduleDragEnd = moduleDragEnd
+  window.moduleDrop = moduleDrop
 
   loadProducts()
 </script>

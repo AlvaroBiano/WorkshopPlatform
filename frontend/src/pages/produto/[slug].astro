@@ -2,12 +2,13 @@
 import Layout from '../../layouts/Layout.astro'
 import Icon from '../../components/ui/Icon.astro'
 import Button from '../../components/ui/Button.astro'
-import { db } from '../../lib/turso'
+import { db } from '@lib/turso'
 
 const slug = Astro.params.slug
+const user = Astro.locals.user
 
 const productResult = await db.execute({
-  sql: `SELECT p.*, 
+  sql: `SELECT p.*,
         (SELECT COALESCE(AVG(rating), 0) FROM reviews WHERE product_id = p.id AND status = 'approved') as avg_rating,
         (SELECT COUNT(*) FROM reviews WHERE product_id = p.id AND status = 'approved') as total_reviews
         FROM products p WHERE p.slug = ? AND p.status = 'published'`,
@@ -21,18 +22,34 @@ if (productResult.rows.length === 0) {
 const product = productResult.rows[0] as any
 
 const modulesResult = await db.execute({
-  sql: `SELECT m.*, COUNT(l.id) as lessons_count 
-        FROM modules m LEFT JOIN lessons l ON m.id = l.module_id 
+  sql: `SELECT m.*, COUNT(l.id) as lessons_count
+        FROM modules m LEFT JOIN lessons l ON m.id = l.module_id
         WHERE m.product_id = ? GROUP BY m.id ORDER BY m.sort_order`,
   args: [product.id],
 })
 
 const reviewsResult = await db.execute({
-  sql: `SELECT r.*, u.full_name FROM reviews r 
-        JOIN users u ON r.user_id = u.id 
+  sql: `SELECT r.*, u.full_name FROM reviews r
+        JOIN users u ON r.user_id = u.id
         WHERE r.product_id = ? AND r.status = 'approved' ORDER BY r.created_at DESC LIMIT 10`,
   args: [product.id],
 })
+
+let userHasAccess = false
+let userAlreadyReviewed = false
+if (user) {
+  const accessCheck = await db.execute({
+    sql: 'SELECT id FROM product_access WHERE user_id = ? AND product_id = ?',
+    args: [user.id, product.id],
+  })
+  userHasAccess = accessCheck.rows.length > 0
+
+  const reviewCheck = await db.execute({
+    sql: 'SELECT id FROM reviews WHERE user_id = ? AND product_id = ?',
+    args: [user.id, product.id],
+  })
+  userAlreadyReviewed = reviewCheck.rows.length > 0
+}
 
 const modules = modulesResult.rows as any[]
 const reviews = reviewsResult.rows as any[]
@@ -118,7 +135,29 @@ function renderStars(rating: number) {
   <section class="py-16 px-4">
     <div class="max-w-4xl mx-auto">
       <h2 class="font-display text-3xl text-dourado mb-8 text-center">Avaliações dos Alunos</h2>
-      
+
+      {user && userHasAccess && !userAlreadyReviewed && (
+        <div class="bg-azul-profundo rounded-xl border border-white/10 p-6 mb-8">
+          <h3 class="font-bold text-dourado mb-4">Deixe sua avaliação</h3>
+          <form id="review-form" class="space-y-3">
+            <div class="flex gap-1 mb-2" id="rating-stars">
+              {[1, 2, 3, 4, 5].map(i => `
+                <button type="button" data-rating="${i}" class="rating-star text-text-muted hover:text-dourado transition-colors">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                </button>
+              `).join('')}
+            </div>
+            <input type="text" id="review-title" placeholder="Título (opcional)" class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2 text-text-light placeholder-text-muted focus:outline-none focus:border-dourado" />
+            <textarea id="review-body" rows="3" placeholder="Sua opinião sobre o produto..." class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2 text-text-light placeholder-text-muted focus:outline-none focus:border-dourado resize-none"></textarea>
+            <button type="submit" class="bg-verde-principal hover:bg-verde-claro text-white px-6 py-2 rounded-lg font-semibold transition-colors">Enviar Avaliação</button>
+          </form>
+        </div>
+      )}
+
+      {user && userAlreadyReviewed && (
+        <p class="text-center text-text-muted text-sm mb-6">Você já avaliou este produto. Obrigado!</p>
+      )}
+
       {reviews.length === 0 ? (
         <p class="text-center text-text-muted">Nenhuma avaliação ainda. Seja o primeiro!</p>
       ) : (
@@ -142,6 +181,57 @@ function renderStars(rating: number) {
       )}
     </div>
   </section>
+
+  <script define:vars={{ productId: product.id }}>
+    let selectedRating = 0
+
+    document.querySelectorAll('.rating-star').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedRating = parseInt(btn.dataset.rating || '0')
+        updateStars()
+      })
+    })
+
+    function updateStars() {
+      document.querySelectorAll('.rating-star').forEach((btn, idx) => {
+        const rating = parseInt(btn.dataset.rating || '0')
+        if (rating <= selectedRating) {
+          btn.classList.add('text-dourado')
+          btn.classList.remove('text-text-muted')
+        } else {
+          btn.classList.add('text-text-muted')
+          btn.classList.remove('text-dourado')
+        }
+      })
+    }
+
+    document.getElementById('review-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault()
+      if (selectedRating === 0) {
+        window.showToast?.('error', 'Selecione uma nota de 1 a 5 estrelas')
+        return
+      }
+      const title = document.getElementById('review-title').value.trim()
+      const body = document.getElementById('review-body').value.trim()
+
+      try {
+        const res = await fetch(`/admin/api/products/${productId}/reviews`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product_id: productId, rating: selectedRating, title, body }),
+        })
+        if (res.ok) {
+          window.showToast?.('success', 'Avaliação enviada! Será analisada e publicada em breve.')
+          location.reload()
+        } else {
+          const err = await res.json().catch(() => ({}))
+          window.showToast?.('error', err.error || 'Erro ao enviar')
+        }
+      } catch (e) {
+        window.showToast?.('error', 'Erro ao enviar')
+      }
+    })
+  </script>
 
   <section class="py-16 px-4 bg-bg-card">
     <div class="max-w-2xl mx-auto text-center">

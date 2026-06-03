@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { db } from '../../lib/turso'
+import { db } from '@lib/turso'
 import bcrypt from 'bcryptjs'
 
 export const POST: APIRoute = async ({ request }) => {

@@ -7,7 +7,9 @@
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "deploy": "vercel --prod"
+    "deploy": "vercel --prod",
+    "db:seed-admin": "npx tsx src/lib/create-admin.ts",
+    "db:seed-demo": "npx tsx src/lib/create-demo-product.ts"
   },
   "dependencies": {
     "@astrojs/react": "^4.4.2",

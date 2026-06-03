@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro'
-import { db } from '../../../../../lib/turso'
-import { getSessionFromCookies, isAdmin } from '../../../../../lib/auth'
+import { db } from '@lib/turso'
+import { getSessionFromCookies, isAdmin } from '@lib/auth'
 import bcrypt from 'bcryptjs'
 
 export const GET: APIRoute = async ({ cookies, params }) => {

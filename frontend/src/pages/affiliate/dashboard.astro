@@ -1,6 +1,6 @@
 ---
 import StudentLayout from '../../layouts/StudentLayout.astro'
-import { db } from '../../lib/turso'
+import { db } from '@lib/turso'
 
 const user = Astro.locals.user
 if (!user) return Astro.redirect('/login')
@@ -152,32 +152,44 @@ const conversionRate = totalClicks ? ((conversions || 0) / totalClicks * 100).to
     </div>
   </div>
 
-  {(withdrawals || []).length > 0 && (
-    <div class="bg-azul-profundo rounded-xl border border-white/10 p-6">
-      <h2 class="font-bold mb-4 text-dourado">Histórico de Saques</h2>
-      <div class="space-y-2">
-        {withdrawals.map((w: any) => (
-          <div class="flex justify-between items-center p-3 bg-white/5 rounded">
-            <div>
-              <p class="font-semibold">R$ {(w.amount_cents / 100).toFixed(2)}</p>
-              <p class="text-xs text-text-muted">{new Date(w.requested_at).toLocaleDateString('pt-BR')}</p>
+    {(withdrawals || []).length > 0 && (
+      <div class="bg-azul-profundo rounded-xl border border-white/10 p-6">
+        <h2 class="font-bold mb-4 text-dourado">Histórico de Saques</h2>
+        <div class="space-y-2">
+          {withdrawals.map((w: any) => (
+            <div class="flex justify-between items-center p-3 bg-white/5 rounded">
+              <div>
+                <p class="font-semibold">R$ {(w.amount_cents / 100).toFixed(2)}</p>
+                <p class="text-xs text-text-muted">{new Date(w.requested_at).toLocaleDateString('pt-BR')}</p>
+              </div>
+              <span class:list={[
+                'px-2 py-1 rounded text-xs',
+                w.status === 'paid' ? 'bg-verde-claro/20 text-verde-claro' :
+                w.status === 'approved' ? 'bg-azul-accent/20 text-azul-accent' :
+                w.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                'bg-dourado/20 text-dourado'
+              ]}>
+                {w.status === 'paid' ? 'Pago' :
+                 w.status === 'approved' ? 'Aprovado' :
+                 w.status === 'rejected' ? 'Rejeitado' : 'Em análise'}
+              </span>
             </div>
-            <span class:list={[
-              'px-2 py-1 rounded text-xs',
-              w.status === 'paid' ? 'bg-verde-claro/20 text-verde-claro' :
-              w.status === 'approved' ? 'bg-azul-accent/20 text-azul-accent' :
-              w.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
-              'bg-dourado/20 text-dourado'
-            ]}>
-              {w.status === 'paid' ? 'Pago' :
-               w.status === 'approved' ? 'Aprovado' :
-               w.status === 'rejected' ? 'Rejeitado' : 'Em análise'}
-            </span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
+    )}
+
+    <div class="bg-azul-profundo rounded-xl border border-white/10 p-6 mt-6 flex items-center justify-between">
+      <div>
+        <h2 class="font-bold text-dourado">Exportar Relatório</h2>
+        <p class="text-text-muted text-sm">Baixe a lista completa de cliques em CSV</p>
+      </div>
+      <a href="/affiliate/api/export-clicks" class="bg-verde-principal hover:bg-verde-claro text-white px-6 py-3 rounded-lg font-semibold transition-colors inline-flex items-center gap-2">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+        Baixar CSV
+      </a>
     </div>
-  )}
+  </div>
 </StudentLayout>
 
 <script>

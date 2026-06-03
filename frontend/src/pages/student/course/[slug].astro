@@ -1,6 +1,6 @@
 ---
 import StudentLayout from '../../../layouts/StudentLayout.astro'
-import { db } from '../../../lib/turso'
+import { db } from '@lib/turso'
 
 const user = Astro.locals.user
 if (!user) return Astro.redirect('/login')
@@ -169,9 +169,81 @@ const totalCount = allLessons.length
       ))}
     </aside>
   </div>
+
+  <section class="bg-azul-profundo rounded-xl border border-white/10 p-6 mt-8" id="comments-section">
+    <h2 class="text-xl font-display font-bold text-dourado mb-4">Comentários da Aula</h2>
+    <form id="comment-form" class="mb-6 flex flex-col gap-3">
+      <textarea id="comment-text" rows="2" placeholder="Deixe um comentário ou dúvida..." class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light placeholder-text-muted focus:outline-none focus:border-dourado transition-colors resize-none"></textarea>
+      <div class="flex justify-end">
+        <button type="submit" class="bg-verde-principal hover:bg-verde-claro text-white px-6 py-2 rounded-lg font-semibold transition-colors text-sm">Comentar</button>
+      </div>
+    </form>
+    <div id="comments-list" class="space-y-3">
+      <p class="text-text-muted text-sm text-center py-4">Carregando...</p>
+    </div>
+  </section>
 </StudentLayout>
 
 <script define:vars={{ lessonId: currentLesson?.id, userId: user?.id, slug }}>
+  let watchedSec = 0
+  let startTime = Date.now()
+
+  async function loadComments() {
+    if (!lessonId) return
+    try {
+      const res = await fetch(`/api/products/comments?lesson_id=${lessonId}`)
+      const data = await res.json()
+      const list = document.getElementById('comments-list')
+      if (!list) return
+      const comments = data.comments || []
+      if (comments.length === 0) {
+        list.innerHTML = '<p class="text-text-muted text-sm text-center py-4">Nenhum comentário ainda. Seja o primeiro!</p>'
+        return
+      }
+      list.innerHTML = comments.map((c: any) => `
+        <div class="bg-bg-dark/50 rounded-lg p-3">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="font-semibold text-sm text-dourado">${escapeHtml(c.full_name || 'Usuário')}</span>
+            <span class="text-text-muted text-xs">${new Date(c.created_at).toLocaleString('pt-BR')}</span>
+          </div>
+          <p class="text-text-light text-sm whitespace-pre-wrap">${escapeHtml(c.body)}</p>
+        </div>
+      `).join('')
+    } catch (e) {
+      console.error('Erro ao carregar comentários:', e)
+    }
+  }
+
+  function escapeHtml(text: any): string {
+    if (text == null) return ''
+    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+  }
+
+  document.getElementById('comment-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    if (!lessonId) return
+    const text = (document.getElementById('comment-text') as HTMLTextAreaElement).value.trim()
+    if (!text) return
+
+    try {
+      const res = await fetch('/api/products/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lesson_id: lessonId, body: text }),
+      })
+      if (res.ok) {
+        ;(document.getElementById('comment-text') as HTMLTextAreaElement).value = ''
+        await loadComments()
+      } else {
+        const err = await res.json().catch(() => ({}))
+        window.showToast?.('error', err.error || 'Erro ao comentar')
+      }
+    } catch (e) {
+      window.showToast?.('error', 'Erro ao comentar')
+    }
+  })
+
+  loadComments()
   let watchedSec = 0
   let startTime = Date.now()
 

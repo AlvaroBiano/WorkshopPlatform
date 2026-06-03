@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro'
-import { db, slugify, generateId } from '../../../../../../../lib/turso'
-import { getSessionFromCookies, isAdmin } from '../../../../../../../lib/auth'
+import { db, slugify, generateId } from '@lib/turso'
+import { getSessionFromCookies, isAdmin } from '@lib/auth'
 
 export const POST: APIRoute = async ({ request, cookies, params }) => {
   const session = await getSessionFromCookies(cookies)

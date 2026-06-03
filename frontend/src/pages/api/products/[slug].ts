@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro'
-import { db } from '../../../lib/turso'
-import { getSessionFromCookies } from '../../../lib/auth'
+import { db } from '@lib/turso'
+import { getSessionFromCookies } from '@lib/auth'
 
 export const GET: APIRoute = async ({ params }) => {
   const { slug } = params

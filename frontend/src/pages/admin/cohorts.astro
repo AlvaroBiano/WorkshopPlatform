@@ -1,0 +1,212 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro'
+import Card from '../../components/ui/Card.astro'
+import Icon from '../../components/ui/Icon.astro'
+import Button from '../../components/ui/Button.astro'
+import { getSessionFromCookies, isAdmin } from '@lib/auth'
+
+const session = await getSessionFromCookies(Astro.cookies)
+if (!session?.profile || !isAdmin(session.profile)) {
+  return Astro.redirect('/login')
+}
+---
+
+<AdminLayout title="Turmas (Cohorts)">
+  <div class="mb-8 flex justify-between items-center">
+    <div>
+      <h1 class="text-3xl font-display font-bold text-dourado">Turmas (Cohorts)</h1>
+      <p class="text-text-muted text-sm mt-1">Gerencie turmas com datas e alunos inscritos</p>
+    </div>
+    <Button onclick="openCreateModal()" icon="plus" variant="primary">Nova Turma</Button>
+  </div>
+
+  <div class="mb-4 flex gap-2">
+    <select id="product-filter" class="bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2 text-text-light">
+      <option value="">Todos os produtos</option>
+    </select>
+    <button onclick="loadCohorts()" class="bg-verde-principal text-white px-6 py-2 rounded-lg text-sm font-medium">Filtrar</button>
+  </div>
+
+  <div id="cohorts-list" class="space-y-3">
+    <div class="p-6 text-center text-text-muted bg-azul-profundo rounded-xl border border-white/10">Carregando...</div>
+  </div>
+</AdminLayout>
+
+<div id="cohort-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeCohortModal()"></div>
+  <div class="relative bg-azul-profundo rounded-xl border border-white/10 shadow-2xl w-full max-w-lg">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-white/5">
+      <h2 class="text-xl font-display font-bold text-dourado">Nova Turma</h2>
+      <button onclick="closeCohortModal()" class="p-2 text-text-muted hover:text-text-light">
+        <Icon name="x" size={20} />
+      </button>
+    </div>
+    <form id="cohort-form" class="p-6 space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-text-muted mb-2">Produto *</label>
+        <select id="cohort-product" required class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light"></select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-text-muted mb-2">Nome *</label>
+        <input type="text" id="cohort-name" required class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light" placeholder="Turma Março 2026" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-text-muted mb-2">Descrição</label>
+        <textarea id="cohort-description" rows="2" class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light"></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-text-muted mb-2">Data início *</label>
+          <input type="date" id="cohort-start" required class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-text-muted mb-2">Data fim</label>
+          <input type="date" id="cohort-end" class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light" />
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-text-muted mb-2">Máx. alunos (opcional)</label>
+        <input type="number" id="cohort-max" min="1" class="w-full bg-bg-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-text-light" placeholder="Ilimitado" />
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button type="button" onclick="closeCohortModal()" class="flex-1 bg-bg-dark hover:bg-white/5 text-text-light px-4 py-3 rounded-lg font-semibold">Cancelar</button>
+        <button type="submit" class="flex-1 bg-verde-principal hover:bg-verde-claro text-white px-4 py-3 rounded-lg font-semibold">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  let products: any[] = []
+
+  async function loadProducts() {
+    try {
+      const res = await fetch('/admin/api/products')
+      const data = await res.json()
+      products = data.products || []
+      const filterSel = document.getElementById('product-filter') as HTMLSelectElement
+      const modalSel = document.getElementById('cohort-product') as HTMLSelectElement
+      const opts = products.map((p: any) => `<option value="${p.id}">${escapeHtml(p.title)}</option>`).join('')
+      filterSel.innerHTML = '<option value="">Todos os produtos</option>' + opts
+      modalSel.innerHTML = '<option value="">Selecione...</option>' + opts
+    } catch (e) {
+      console.error('Erro ao carregar produtos:', e)
+    }
+  }
+
+  async function loadCohorts() {
+    const productId = (document.getElementById('product-filter') as HTMLSelectElement).value
+    let url = '/admin/api/cohorts'
+    if (productId) {
+      url = `/admin/api/products/${productId}/cohorts`
+    }
+    try {
+      const res = await fetch(url)
+      const data = await res.json()
+      render(data.cohorts || [])
+    } catch (e) {
+      document.getElementById('cohorts-list').innerHTML = '<div class="p-6 text-center text-vermelho">Erro</div>'
+    }
+  }
+
+  function render(cohorts: any[]) {
+    const container = document.getElementById('cohorts-list')
+    if (cohorts.length === 0) {
+      container.innerHTML = '<div class="p-6 text-center text-text-muted bg-azul-profundo rounded-xl border border-white/10">Nenhuma turma cadastrada</div>'
+      return
+    }
+
+    container.innerHTML = cohorts.map(c => `
+      <div class="bg-azul-profundo rounded-xl border border-white/10 p-6">
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-1">
+              <h3 class="font-bold text-dourado text-lg">${escapeHtml(c.name)}</h3>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${c.is_active ? 'bg-verde-claro/10 text-verde-claro' : 'bg-vermelho/10 text-vermelho'}">${c.is_active ? 'Ativa' : 'Inativa'}</span>
+            </div>
+            ${c.description ? `<p class="text-text-muted text-sm mb-2">${escapeHtml(c.description)}</p>` : ''}
+            <div class="flex gap-4 text-sm text-text-muted">
+              <span>📅 Início: ${new Date(c.start_date).toLocaleDateString('pt-BR')}</span>
+              ${c.end_date ? `<span>Fim: ${new Date(c.end_date).toLocaleDateString('pt-BR')}</span>` : ''}
+              ${c.max_students ? `<span>Máx: ${c.max_students}</span>` : ''}
+            </div>
+          </div>
+          <button onclick="deleteCohort('${c.id}')" class="bg-vermelho/20 hover:bg-vermelho/30 text-vermelho px-3 py-2 rounded text-sm">Excluir</button>
+        </div>
+      </div>
+    `).join('')
+  }
+
+  function escapeHtml(text: any): string {
+    if (text == null) return ''
+    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+  }
+
+  function openCreateModal() {
+    document.getElementById('cohort-modal').classList.remove('hidden')
+    document.getElementById('cohort-modal').classList.add('flex')
+  }
+
+  function closeCohortModal() {
+    document.getElementById('cohort-modal').classList.remove('flex')
+    document.getElementById('cohort-modal').classList.add('hidden')
+  }
+
+  document.getElementById('cohort-form').addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const product_id = (document.getElementById('cohort-product') as HTMLSelectElement).value
+    if (!product_id) {
+      window.showToast('error', 'Selecione um produto')
+      return
+    }
+
+    const data = {
+      name: (document.getElementById('cohort-name') as HTMLInputElement).value.trim(),
+      description: (document.getElementById('cohort-description') as HTMLTextAreaElement).value.trim(),
+      start_date: (document.getElementById('cohort-start') as HTMLInputElement).value,
+      end_date: (document.getElementById('cohort-end') as HTMLInputElement).value || null,
+      max_students: parseInt((document.getElementById('cohort-max') as HTMLInputElement).value) || null,
+    }
+
+    try {
+      const res = await fetch(`/admin/api/products/${product_id}/cohorts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (res.ok) {
+        window.showToast('success', 'Turma criada!')
+        closeCohortModal()
+        loadCohorts()
+      } else {
+        const err = await res.json().catch(() => ({}))
+        window.showToast('error', err.error || 'Erro')
+      }
+    } catch (e) {
+      window.showToast('error', 'Erro')
+    }
+  })
+
+  async function deleteCohort(id: string) {
+    if (!confirm('Excluir esta turma?')) return
+    try {
+      const res = await fetch(`/admin/api/cohorts/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        window.showToast('success', 'Turma excluída!')
+        loadCohorts()
+      } else {
+        window.showToast('error', 'Erro ao excluir')
+      }
+    } catch (e) {
+      window.showToast('error', 'Erro')
+    }
+  }
+
+  window.openCreateModal = openCreateModal
+  window.closeCohortModal = closeCohortModal
+  window.deleteCohort = deleteCohort
+  window.loadCohorts = loadCohorts
+
+  loadProducts()
+  loadCohorts()
+</script>

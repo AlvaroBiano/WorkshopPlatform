@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { db } from '../lib/turso'
+import { db } from '@lib/turso'
 
 export const GET: APIRoute = async () => {
   const baseUrl = import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321'

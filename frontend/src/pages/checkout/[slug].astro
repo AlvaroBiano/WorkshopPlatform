@@ -1,20 +1,26 @@
 ---
 import Layout from '../../layouts/Layout.astro'
 import Button from '../../components/ui/Button.astro'
-import { db } from '../../lib/turso'
+import { db } from '@lib/turso'
 
 const slug = Astro.params.slug
+const affiliateCode = Astro.url.searchParams.get('ref') || Astro.cookies.get('aff_ref')?.value || ''
 
 const productResult = await db.execute({
   sql: 'SELECT * FROM products WHERE slug = ? AND status = ?',
   args: [slug, 'published'],
 })
 
-if (productResult.rows.length === 0) {
-  return Astro.redirect('/')
-}
-
+if (productResult.rows.length === 0) return Astro.redirect('/')
 const product = productResult.rows[0] as any
+
+if (affiliateCode) {
+  Astro.cookies.set('aff_ref', affiliateCode, {
+    path: '/',
+    maxAge: 60 * 60 * 24 * 30,
+    sameSite: 'lax',
+  })
+}
 ---
 
 <Layout title={`Checkout | ${product.title}`}>
@@ -101,7 +107,7 @@ const product = productResult.rows[0] as any
   </div>
 </Layout>
 
-<script define:vars={{ productId: product.id, priceCents: product.price_cents }}>
+<script define:vars={{ productId: product.id, priceCents: product.price_cents, affiliateCode }}>
   let currentPrice = priceCents
   let appliedCoupon = null
 
@@ -165,6 +171,7 @@ const product = productResult.rows[0] as any
       cpf: document.getElementById('cpf').value.replace(/\D/g, ''),
       whatsapp: document.getElementById('whatsapp').value.trim(),
       coupon_code: appliedCoupon?.code,
+      affiliate_code: affiliateCode,
       amount_cents: currentPrice,
     }
     

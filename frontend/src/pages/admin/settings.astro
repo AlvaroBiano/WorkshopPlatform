@@ -1,6 +1,6 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro'
-import { getSessionFromCookies, isAdmin } from '../../lib/auth'
+import { getSessionFromCookies, isAdmin } from '@lib/auth'
 
 const session = await getSessionFromCookies(Astro.cookies)
 if (!session?.profile || !isAdmin(session.profile)) {

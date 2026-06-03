@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { db } from '../../lib/turso'
+import { db } from '@lib/turso'
 
 export const GET: APIRoute = async () => {
   const start = Date.now()
