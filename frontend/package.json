@@ -8,6 +8,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "deploy": "vercel --prod",
+    "db:init-local": "npx tsx src/lib/init-local-db.ts",
     "db:seed-admin": "npx tsx src/lib/create-admin.ts",
     "db:seed-demo": "npx tsx src/lib/create-demo-product.ts",
     "db:test": "npx tsx src/lib/test-db.ts"

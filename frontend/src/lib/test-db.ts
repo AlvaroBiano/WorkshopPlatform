@@ -6,11 +6,11 @@
 import { createClient } from '@libsql/client'
 import bcrypt from 'bcryptjs'
 
-const url = process.env.TURSO_DATABASE_URL || ''
+const url = process.env.TURSO_DATABASE_URL || 'file:./local.db'
 const authToken = process.env.TURSO_AUTH_TOKEN || ''
 
-if (!url || !authToken) {
-  console.error('❌ Defina TURSO_DATABASE_URL e TURSO_AUTH_TOKEN')
+if (!url) {
+  console.error('❌ Defina TURSO_DATABASE_URL ou use file:./local.db')
   process.exit(1)
 }
 
