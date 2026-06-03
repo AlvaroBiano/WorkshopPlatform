@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { db } from '../../../../../lib/turso'
+import { db, slugify, generateId } from '../../../../../lib/turso'
 import { getSessionFromCookies, isAdmin } from '../../../../../lib/auth'
 
 export const POST: APIRoute = async ({ request, cookies, params }) => {
@@ -10,55 +10,40 @@ export const POST: APIRoute = async ({ request, cookies, params }) => {
 
   const { productId } = params
   if (!productId) {
-    return new Response(JSON.stringify({ error: 'Product ID é obrigatório' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return new Response(JSON.stringify({ error: 'Product ID é obrigatório' }), { status: 400 })
   }
 
   try {
-    const { title, sort_order } = await request.json()
+    const body = await request.json()
+    const title = (body.title || '').toString().trim()
+    const description = body.description ? body.description.toString().trim() : ''
+    const sort_order = body.sort_order !== undefined ? parseInt(body.sort_order) : undefined
 
     if (!title) {
-      return new Response(JSON.stringify({ error: 'Título é obrigatório' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      })
+      return new Response(JSON.stringify({ error: 'Título é obrigatório' }), { status: 400 })
     }
 
     const product = await db.execute({
-      sql: 'SELECT * FROM products WHERE id = ?',
+      sql: 'SELECT id FROM products WHERE id = ?',
       args: [productId],
     })
 
     if (product.rows.length === 0) {
-      return new Response(JSON.stringify({ error: 'Produto não encontrado' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      })
+      return new Response(JSON.stringify({ error: 'Produto não encontrado' }), { status: 404 })
     }
 
-    const id = crypto.randomUUID()
-    const slug = title
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')
+    const id = generateId()
 
     const maxOrder = await db.execute({
-      sql: 'SELECT MAX(sort_order) as max_order FROM modules WHERE product_id = ?',
+      sql: 'SELECT COALESCE(MAX(sort_order), 0) as max_order FROM modules WHERE product_id = ?',
       args: [productId],
     })
-
-    const finalOrder = sort_order ?? ((maxOrder.rows[0] as any)?.max_order || 0) + 1
+    const finalOrder = sort_order !== undefined ? sort_order : (Number((maxOrder.rows[0] as any)?.max_order || 0) + 1)
 
     await db.execute({
-      sql: `
-        INSERT INTO modules (id, product_id, title, slug, sort_order, created_at)
-        VALUES (?, ?, ?, ?, ?, datetime('now'))
-      `,
-      args: [id, productId, title, slug, finalOrder],
+      sql: `INSERT INTO modules (id, product_id, title, slug, description, sort_order, is_active, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, 1, datetime('now'))`,
+      args: [id, productId, title, slugify(title), description || null, finalOrder],
     })
 
     const newModule = await db.execute({
@@ -67,12 +52,10 @@ export const POST: APIRoute = async ({ request, cookies, params }) => {
     })
 
     await db.execute({
-      sql: `
-        INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details, ip_address, created_at)
-        VALUES (?, ?, 'CREATE_MODULE', 'modules', ?, ?, ?, datetime('now'))
-      `,
+      sql: `INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details, ip_address, created_at)
+            VALUES (?, ?, 'CREATE_MODULE', 'modules', ?, ?, ?, datetime('now'))`,
       args: [
-        crypto.randomUUID(),
+        generateId(),
         session.profile.id,
         id,
         JSON.stringify({ title, product_id: productId }),
@@ -89,9 +72,6 @@ export const POST: APIRoute = async ({ request, cookies, params }) => {
     })
   } catch (error) {
     console.error('Error creating module:', error)
-    return new Response(JSON.stringify({ error: 'Erro ao criar módulo' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return new Response(JSON.stringify({ error: 'Erro ao criar módulo' }), { status: 500 })
   }
 }

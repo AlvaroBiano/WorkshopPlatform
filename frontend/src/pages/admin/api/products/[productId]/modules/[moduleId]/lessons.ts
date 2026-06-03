@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { db } from '../../../../../../../lib/turso'
+import { db, slugify, generateId } from '../../../../../../../lib/turso'
 import { getSessionFromCookies, isAdmin } from '../../../../../../../lib/auth'
 
 export const POST: APIRoute = async ({ request, cookies, params }) => {
@@ -10,55 +10,51 @@ export const POST: APIRoute = async ({ request, cookies, params }) => {
 
   const { productId, moduleId } = params
   if (!productId || !moduleId) {
-    return new Response(JSON.stringify({ error: 'IDs são obrigatórios' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return new Response(JSON.stringify({ error: 'IDs são obrigatórios' }), { status: 400 })
   }
 
   try {
-    const { title, video_url, duration_sec, sort_order } = await request.json()
+    const body = await request.json()
+    const title = (body.title || '').toString().trim()
+    const type = (body.type || 'video').toString()
+    const description = body.description ? body.description.toString().trim() : ''
+    const duration_sec = parseInt(body.duration_sec) || 0
+    const vimeo_id = body.vimeo_id ? body.vimeo_id.toString().trim() : ''
+    const youtube_url = body.youtube_url ? body.youtube_url.toString().trim() : ''
+    const video_url = body.video_url ? body.video_url.toString().trim() : ''
+    const file_url = body.file_url ? body.file_url.toString().trim() : ''
+    const sort_order = body.sort_order !== undefined ? parseInt(body.sort_order) : undefined
 
     if (!title) {
-      return new Response(JSON.stringify({ error: 'Título é obrigatório' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      })
+      return new Response(JSON.stringify({ error: 'Título é obrigatório' }), { status: 400 })
     }
 
-    const module = await db.execute({
-      sql: 'SELECT * FROM modules WHERE id = ? AND product_id = ?',
+    if (!['video', 'vimeo', 'youtube', 'pdf', 'text', 'quiz'].includes(type)) {
+      return new Response(JSON.stringify({ error: 'Tipo inválido' }), { status: 400 })
+    }
+
+    const moduleResult = await db.execute({
+      sql: 'SELECT id FROM modules WHERE id = ? AND product_id = ?',
       args: [moduleId, productId],
     })
 
-    if (module.rows.length === 0) {
-      return new Response(JSON.stringify({ error: 'Módulo não encontrado' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      })
+    if (moduleResult.rows.length === 0) {
+      return new Response(JSON.stringify({ error: 'Módulo não encontrado neste produto' }), { status: 404 })
     }
 
-    const id = crypto.randomUUID()
-    const slug = title
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')
+    const id = generateId()
 
     const maxOrder = await db.execute({
-      sql: 'SELECT MAX(sort_order) as max_order FROM lessons WHERE module_id = ?',
+      sql: 'SELECT COALESCE(MAX(sort_order), 0) as max_order FROM lessons WHERE module_id = ?',
       args: [moduleId],
     })
-
-    const finalOrder = sort_order ?? ((maxOrder.rows[0] as any)?.max_order || 0) + 1
+    const finalOrder = sort_order !== undefined ? sort_order : (Number((maxOrder.rows[0] as any)?.max_order || 0) + 1)
 
     await db.execute({
-      sql: `
-        INSERT INTO lessons (id, module_id, title, slug, video_url, duration_sec, sort_order, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
-      `,
-      args: [id, moduleId, title, slug, video_url || '', duration_sec || 0, finalOrder],
+      sql: `INSERT INTO lessons
+            (id, module_id, title, slug, description, type, vimeo_id, youtube_url, video_url, file_url, duration_sec, sort_order, is_active, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'))`,
+      args: [id, moduleId, title, slugify(title), description, type, vimeo_id || null, youtube_url || null, video_url || null, file_url || null, duration_sec, finalOrder],
     })
 
     const newLesson = await db.execute({
@@ -67,15 +63,13 @@ export const POST: APIRoute = async ({ request, cookies, params }) => {
     })
 
     await db.execute({
-      sql: `
-        INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details, ip_address, created_at)
-        VALUES (?, ?, 'CREATE_LESSON', 'lessons', ?, ?, ?, datetime('now'))
-      `,
+      sql: `INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details, ip_address, created_at)
+            VALUES (?, ?, 'CREATE_LESSON', 'lessons', ?, ?, ?, datetime('now'))`,
       args: [
-        crypto.randomUUID(),
+        generateId(),
         session.profile.id,
         id,
-        JSON.stringify({ title, module_id: moduleId }),
+        JSON.stringify({ title, type, module_id: moduleId }),
         request.headers.get('x-forwarded-for') || 'unknown',
       ],
     })
@@ -89,9 +83,6 @@ export const POST: APIRoute = async ({ request, cookies, params }) => {
     })
   } catch (error) {
     console.error('Error creating lesson:', error)
-    return new Response(JSON.stringify({ error: 'Erro ao criar aula' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return new Response(JSON.stringify({ error: 'Erro ao criar aula' }), { status: 500 })
   }
 }

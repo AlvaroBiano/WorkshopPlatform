@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { db } from '../../../lib/turso'
+import { db, slugify, generateId, logAudit } from '../../../lib/turso'
 import { getSessionFromCookies, isAdmin } from '../../../lib/auth'
 
 export const GET: APIRoute = async ({ cookies }) => {
@@ -10,16 +10,13 @@ export const GET: APIRoute = async ({ cookies }) => {
 
   try {
     const productsResult = await db.execute(`
-      SELECT 
+      SELECT
         p.*,
-        COUNT(DISTINCT m.id) as modules_count,
-        COUNT(DISTINCT l.id) as lessons_count,
-        COUNT(DISTINCT pa.user_id) as students_count
+        (SELECT COUNT(DISTINCT m.id) FROM modules m WHERE m.product_id = p.id) as modules_count,
+        (SELECT COUNT(DISTINCT l.id) FROM lessons l
+          INNER JOIN modules m ON l.module_id = m.id WHERE m.product_id = p.id) as lessons_count,
+        (SELECT COUNT(DISTINCT pa.user_id) FROM product_access pa WHERE pa.product_id = p.id) as students_count
       FROM products p
-      LEFT JOIN modules m ON p.id = m.product_id
-      LEFT JOIN lessons l ON m.id = l.module_id
-      LEFT JOIN product_access pa ON p.id = pa.product_id
-      GROUP BY p.id
       ORDER BY p.created_at DESC
     `)
 
@@ -30,10 +27,7 @@ export const GET: APIRoute = async ({ cookies }) => {
     })
   } catch (error) {
     console.error('Error fetching products:', error)
-    return new Response(JSON.stringify({ error: 'Erro ao carregar produtos' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return new Response(JSON.stringify({ error: 'Erro ao carregar produtos' }), { status: 500 })
   }
 }
 
@@ -44,50 +38,47 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   try {
-    const {
-      title,
-      description,
-      price_cents,
-      type = 'course',
-      status = 'draft',
-      cover_url,
-      is_affiliable = false,
-      affiliate_commission_pct = 40,
-    } = await request.json()
+    const body = await request.json()
+    const title = (body.title || '').toString().trim()
+    const description = body.description ? body.description.toString().trim() : ''
+    const price_cents = parseInt(body.price_cents) || 0
+    const type = (body.type || 'course').toString()
+    const status = (body.status || 'draft').toString()
+    const cover_url = body.cover_url ? body.cover_url.toString().trim() : ''
+    const is_affiliable = body.is_affiliable !== undefined ? Boolean(body.is_affiliable) : false
+    const affiliate_commission_pct = parseFloat(body.affiliate_commission_pct) || 40
 
     if (!title) {
-      return new Response(JSON.stringify({ error: 'Título é obrigatório' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      })
+      return new Response(JSON.stringify({ error: 'Título é obrigatório' }), { status: 400 })
     }
 
-    const id = crypto.randomUUID()
-    const slug = title
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')
+    if (!['workshop', 'course', 'ebook'].includes(type)) {
+      return new Response(JSON.stringify({ error: 'Tipo inválido' }), { status: 400 })
+    }
+
+    if (!['draft', 'published', 'archived'].includes(status)) {
+      return new Response(JSON.stringify({ error: 'Status inválido' }), { status: 400 })
+    }
+
+    const id = generateId()
+    const slug = slugify(title)
 
     await db.execute({
-      sql: `
-        INSERT INTO products (
-          id, title, slug, description, price_cents, type, status, 
-          cover_url, is_affiliable, affiliate_commission_pct, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-      `,
+      sql: `INSERT INTO products
+            (id, title, slug, description, cover_url, price_cents, type, status, is_affiliable, affiliate_commission_pct, is_published, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
       args: [
         id,
         title,
         slug,
-        description || '',
-        price_cents || 0,
+        description,
+        cover_url,
+        price_cents,
         type,
         status,
-        cover_url || '',
         is_affiliable ? 1 : 0,
         affiliate_commission_pct,
+        status === 'published' ? 1 : 0,
       ],
     })
 
@@ -96,19 +87,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       args: [id],
     })
 
-    await db.execute({
-      sql: `
-        INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details, ip_address, created_at)
-        VALUES (?, ?, 'CREATE_PRODUCT', 'products', ?, ?, ?, datetime('now'))
-      `,
-      args: [
-        crypto.randomUUID(),
-        session.profile.id,
-        id,
-        JSON.stringify({ title, slug }),
-        request.headers.get('x-forwarded-for') || 'unknown',
-      ],
-    })
+    await logAudit(
+      session.profile.id,
+      'CREATE_PRODUCT',
+      'products',
+      id,
+      { title, slug },
+      request.headers.get('x-forwarded-for') || 'unknown'
+    )
 
     return new Response(JSON.stringify({
       success: true,
@@ -119,9 +105,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     })
   } catch (error) {
     console.error('Error creating product:', error)
-    return new Response(JSON.stringify({ error: 'Erro ao criar produto' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return new Response(JSON.stringify({ error: 'Erro ao criar produto' }), { status: 500 })
   }
 }
