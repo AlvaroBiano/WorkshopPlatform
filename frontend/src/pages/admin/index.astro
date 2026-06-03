@@ -7,16 +7,17 @@ import { db } from '../../lib/turso'
 
 const user = Astro.locals.user
 
-const [studentsResult, productsResult, ordersResult, pendingResult, revenueResult] = await Promise.all([
+const [studentsResult, productsResult, ordersResult, pendingResult, revenueResult, pendingRegResult] = await Promise.all([
   db.execute("SELECT COUNT(*) as count FROM users WHERE role = 'student'"),
   db.execute('SELECT COUNT(*) as count FROM products'),
-  db.execute(`SELECT o.*, u.full_name as user_name, p.title as product_name 
-              FROM orders o 
-              JOIN users u ON o.user_id = u.id 
-              JOIN products p ON o.product_id = p.id 
+  db.execute(`SELECT o.*, u.full_name as user_name, p.title as product_name
+              FROM orders o
+              JOIN users u ON o.user_id = u.id
+              JOIN products p ON o.product_id = p.id
               ORDER BY o.created_at DESC LIMIT 10`),
   db.execute("SELECT COUNT(*) as count FROM orders WHERE status = 'pending'"),
   db.execute("SELECT COALESCE(SUM(amount_cents), 0) as total FROM orders WHERE status = 'approved' AND strftime('%m', created_at) = strftime('%m', 'now')"),
+  db.execute("SELECT COUNT(*) as count, pr.* FROM pending_registrations pr WHERE status IN ('awaiting_proof', 'pending') ORDER BY pr.created_at DESC LIMIT 5"),
 ])
 
 const totalStudents = Number(studentsResult.rows[0]?.count || 0)
@@ -24,6 +25,8 @@ const totalProducts = Number(productsResult.rows[0]?.count || 0)
 const recentOrders = ordersResult.rows || []
 const monthRevenue = Number(revenueResult.rows[0]?.total || 0)
 const pendingCount = Number(pendingResult.rows[0]?.count || 0)
+const pendingRegsCount = Number(pendingRegResult.rows[0]?.count || 0)
+const pendingRegs = (pendingRegResult.rows || []).slice(1) as any[]
 ---
 
 <AdminLayout title="Dashboard">
@@ -73,11 +76,27 @@ const pendingCount = Number(pendingResult.rows[0]?.count || 0)
   <section class="card p-6 mb-8">
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-xl font-bold text-dourado">Aprovações Pendentes</h2>
-      <a href="/admin/students" class="text-dourado text-sm hover:underline flex items-center gap-1">
+      <a href="/admin/pending" class="text-dourado text-sm hover:underline flex items-center gap-1">
         Ver todas <Icon name="arrow-right" size={14} />
       </a>
     </div>
-    <p class="text-text-muted text-center py-8">Nenhuma aprovação pendente</p>
+    {pendingRegsCount === 0 ? (
+      <p class="text-text-muted text-center py-8">Nenhuma aprovação pendente</p>
+    ) : (
+      <div class="space-y-2">
+        {pendingRegs.map((p: any) => (
+          <a href="/admin/pending" class="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+            <div>
+              <p class="font-medium text-text-light">{p.full_name}</p>
+              <p class="text-text-muted text-sm">{p.email}</p>
+            </div>
+            <div class="text-text-muted text-xs">
+              {new Date(p.created_at).toLocaleDateString('pt-BR')}
+            </div>
+          </a>
+        ))}
+      </div>
+    )}
   </section>
 
   <section class="card p-6">

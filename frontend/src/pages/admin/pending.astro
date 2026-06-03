@@ -1,0 +1,145 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro'
+import Card from '../../components/ui/Card.astro'
+import Badge from '../../components/ui/Badge.astro'
+import Icon from '../../components/ui/Icon.astro'
+import { getSessionFromCookies, isAdmin } from '../../lib/auth'
+
+const session = await getSessionFromCookies(Astro.cookies)
+if (!session?.profile || !isAdmin(session.profile)) {
+  return Astro.redirect('/login')
+}
+---
+
+<AdminLayout title="Cadastros Pendentes">
+  <div class="mb-8">
+    <h1 class="text-3xl font-display font-bold text-dourado">Cadastros Pendentes</h1>
+    <p class="text-text-muted text-sm mt-1">Aprovar ou rejeitar cadastros de novos alunos</p>
+  </div>
+
+  <div id="pending-table" class="bg-azul-profundo rounded-xl border border-white/10">
+    <div class="p-6 text-center text-text-muted">Carregando...</div>
+  </div>
+</AdminLayout>
+
+<script>
+  async function loadPending() {
+    try {
+      const res = await fetch('/admin/api/pending-registrations')
+      const data = await res.json()
+      render(data.pending || [])
+    } catch (e) {
+      document.getElementById('pending-table').innerHTML = '<div class="p-6 text-center text-vermelho">Erro ao carregar</div>'
+    }
+  }
+
+  function render(items) {
+    const container = document.getElementById('pending-table')
+    if (items.length === 0) {
+      container.innerHTML = '<div class="p-6 text-center text-text-muted">Nenhum cadastro pendente</div>'
+      return
+    }
+
+    container.innerHTML = `
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-bg-dark/50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase">Nome</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase">Email</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase">WhatsApp</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase">Produto</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase">Status</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase">Data</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map(p => `
+              <tr class="border-b border-white/5 hover:bg-white/5">
+                <td class="px-4 py-3 font-medium">${escapeHtml(p.full_name)}</td>
+                <td class="px-4 py-3 text-text-muted">${escapeHtml(p.email)}</td>
+                <td class="px-4 py-3 text-text-muted">${escapeHtml(p.whatsapp || '—')}</td>
+                <td class="px-4 py-3">${escapeHtml(p.desired_product_title || '—')}</td>
+                <td class="px-4 py-3">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(p.status)}">${statusLabel(p.status)}</span>
+                </td>
+                <td class="px-4 py-3 text-text-muted text-xs">${new Date(p.created_at).toLocaleString('pt-BR')}</td>
+                <td class="px-4 py-3">
+                  ${p.status === 'awaiting_proof' || p.status === 'pending' ? `
+                    <div class="flex gap-2">
+                      <button onclick="approve('${p.id}')" class="text-verde-claro hover:text-verde-claro/80 text-xs font-semibold">Aprovar</button>
+                      <button onclick="reject('${p.id}')" class="text-vermelho hover:text-vermelho/80 text-xs font-semibold">Rejeitar</button>
+                    </div>
+                  ` : '<span class="text-text-muted text-xs">—</span>'}
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `
+  }
+
+  function statusColor(s) {
+    if (s === 'approved') return 'bg-verde-claro/10 text-verde-claro'
+    if (s === 'rejected') return 'bg-vermelho/10 text-vermelho'
+    return 'bg-dourado/10 text-dourado'
+  }
+
+  function statusLabel(s) {
+    if (s === 'approved') return 'Aprovado'
+    if (s === 'rejected') return 'Rejeitado'
+    return 'Pendente'
+  }
+
+  function escapeHtml(text) {
+    if (text == null) return ''
+    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+  }
+
+  async function approve(id) {
+    if (!confirm('Aprovar este cadastro? O aluno será criado com senha = CPF.')) return
+    try {
+      const res = await fetch('/admin/api/approve-student', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      if (res.ok) {
+        window.showToast('success', 'Cadastro aprovado!')
+        loadPending()
+      } else {
+        const err = await res.json().catch(() => ({ error: 'Erro' }))
+        window.showToast('error', err.error || 'Erro ao aprovar')
+      }
+    } catch (e) {
+      window.showToast('error', 'Erro ao aprovar')
+    }
+  }
+
+  async function reject(id) {
+    const reason = prompt('Motivo da rejeição (opcional):')
+    if (reason === null) return
+    try {
+      const res = await fetch('/admin/api/reject-student', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, reason }),
+      })
+      if (res.ok) {
+        window.showToast('success', 'Cadastro rejeitado')
+        loadPending()
+      } else {
+        window.showToast('error', 'Erro ao rejeitar')
+      }
+    } catch (e) {
+      window.showToast('error', 'Erro ao rejeitar')
+    }
+  }
+
+  window.approve = approve
+  window.reject = reject
+
+  loadPending()
+</script>
